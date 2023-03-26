@@ -1,0 +1,9 @@
+{application,elixir_aot,
+             [{applications,[kernel,stdlib,elixir,logger]},
+              {description,"elixir_aot"},
+              {modules,['Elixir.ElixirAOT','Elixir.ElixirAOT.CLI',
+                        'Elixir.ElixirAOT.CLI.State',
+                        'Elixir.ElixirAOT.Transformator',
+                        'Elixir.ElixirAOT.Transformator.Macros']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
