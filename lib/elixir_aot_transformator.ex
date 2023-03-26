@@ -8,18 +8,31 @@ defmodule ElixirAOT.Transformator.Macros do
   end
 end
 
+defmodule ElixirAOT.Compiler do
+  def compile(filename, code) do
+    File.write(filename, code)
+    executable_name = hd(String.split(filename, "."))
+    case System.cmd("g++", ["-o", executable_name, "aotlib.cpp", filename]) do
+        {output, _} -> IO.puts(output)
+        _ -> IO.puts("Something unexpected occurred!")
+    end
+  end
+end
+
 defmodule ElixirAOT.Transformator do
   alias ElixirAOT.Transformator, as: Transformator
   require Transformator.Macros
   defstruct [:includes, :ast]
 
+  @default_includes ["\"aotgeneral.h\""]
+
   def transform(includes, ast),
-    do: transform(%Transformator{includes: ["\"aotlib.h\""] ++ includes, ast: ast})
+    do: transform(%Transformator{includes: @default_includes ++ includes, ast: ast})
 
   def transform(transformator) do
     create_include(transformator.includes) <>
       "int main() {\n" <>
-      create_ast(transformator.ast) <>
+      create_ast(transformator.ast) <> ";" <>
       "\n" <>
       "return 0;\n" <>
       "}"
@@ -63,7 +76,7 @@ defmodule ElixirAOT.Transformator do
 
   def create_parent_args([], acc), do: "(" <> acc <> ")"
 
-  def create_remote([{:__aliases__, metadata, [module]}, target]) do
+  def create_remote([{:__aliases__, _, [module]}, target]) do
     "ExRemote_" <> atom_to_raw_string(module) <> "_" <> atom_to_raw_string(target)
   end
 

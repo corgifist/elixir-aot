@@ -23,6 +23,7 @@ defmodule ElixirAOT.CLI do
     result = ElixirAOT.Transformator.transform([], ast)
     IO.inspect(ast)
     IO.puts(result)
+    ElixirAOT.Compiler.compile("aot_cli.cpp", result)
     main(i)
   end
 end
