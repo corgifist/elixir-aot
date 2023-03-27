@@ -1,5 +1,5 @@
 <h1><p align="center">ElixirAOT [Heavy work in progress!]</p></h1>
-<p align="center">ElixirAOT is a tool for converting ElixirAOT to CPP code, so you can then compile it with native executable!</p>
+<p align="center">ElixirAOT is a tool for converting Elixir AST to CPP code, so you can then compile it to native executable!</p>
 
 ElixirAOT is useful for:
 * Accessing low-level or OS-specific functions via Elixir code
