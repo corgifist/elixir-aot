@@ -4,13 +4,13 @@
 #include <unordered_map>
 #include <sstream>
 #include <stack>
-
-static std::unordered_map<std::string, int> ATOMS;
-static std::unordered_map<int, std::string> REVERSED_ATOMS;
-static int ATOMS_COUNT = 0;
+#include <stdexcept>
+#include <vector>
+#include <cstdarg>
 
 typedef enum {
-    EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_STRING_TYPE, EX_NIL_TYPE
+    EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_STRING_TYPE, 
+    EX_LIST_TYPE, EX_NIL_TYPE
 } ExValueType;
 
 typedef struct {
@@ -19,6 +19,8 @@ typedef struct {
         double number;
         int atom;
         std::string* str;
+
+        void* pointer;
     } as;
 } ExObject;
 
@@ -27,42 +29,22 @@ typedef std::unordered_map<std::string, ExObject> ExBinding;
 typedef struct {
     std::stack<ExBinding> scope;
 
-    ExObject get(std::string name) {
-        return scope.top()[name];
-    }
+    ExObject get(std::string name);
+    ExObject write(std::string name, ExObject object);
 
-    ExObject write(std::string name, ExObject object) {
-        scope.top()[name] = object;
-        return object;
-    }
-
-    void push() {
-        scope.push(scope.top());
-    }
-    void pop() {
-        scope.pop();
-    }
+    void push();
+    void pop();
 } ExEnvironment;
 
-#define EX_NUMBER(value) ((ExObject){EX_NUMBER_TYPE, {.number = value}})
-#define EX_NIL() ((ExObject){EX_NIL_TYPE, {}})
+ExObject EX_LIST(std::vector<ExObject> list);
 
-#define AS_NUMBER(value) ((value).as.number)
+ExObject EX_ATOM(std::string atom);
 
-static ExObject EX_ATOM(std::string atom) {
-    if (ATOMS.find(atom) != ATOMS.end()) return ((ExObject){EX_ATOM_TYPE, {.atom=ATOMS[atom]}});
-    ATOMS[atom] = ATOMS_COUNT;
-    REVERSED_ATOMS[ATOMS_COUNT] = atom;
-    ATOMS_COUNT++;
-    return EX_ATOM(atom);
-}
-
-static ExObject EX_STRING(std::string str) {
-    std::string mstr = std::move(str);
-    return ((ExObject){EX_STRING_TYPE, {.str=&mstr}});
-}
+ExObject EX_STRING(std::string str);
 
 ExObject ExRemote_IO_puts(ExObject expr);
+
+ExObject ExMatch_pattern(ExObject left, ExObject right);
 
 static std::string DoubleToString(double value) {
     std::ostringstream strs;
@@ -70,4 +52,16 @@ static std::string DoubleToString(double value) {
     return strs.str();
 }
 
+bool ExObject_equals(ExObject a, ExObject b);
 std::string ExObject_ToString(ExObject object);
+std::string ExObject_AtomToRawString(ExObject object);
+std::string ExObject_ListToString(ExObject list);
+
+#define EX_NUMBER(value) ((ExObject){EX_NUMBER_TYPE, {.number = value}})
+#define EX_NIL() ((ExObject){EX_NIL_TYPE, {}})
+
+#define AS_NUMBER(value) ((value).as.number)
+#define AS_LIST(value) *((std::vector<ExObject>*) (value).as.pointer)
+#define AS_STRING(value) *(value.as.str)
+
+#define MATCH_ERROR() throw std::runtime_error("cannot match values: " + ExObject_ToString(left) + " and " + ExObject_ToString(right))

@@ -2,15 +2,16 @@
 #include "aotlib.h"
 
 #define BINARY_OP(name, op) \
-    static ExObject name(ExObject a, ExObject b) { \
+    ExObject name(ExObject a, ExObject b) { \
         return EX_NUMBER(AS_NUMBER(a) op AS_NUMBER(b)); \
     }
 
-BINARY_OP(add, +)
-BINARY_OP(sub, -)
-BINARY_OP(mul, *)
-BINARY_OP(div, /)
+#define BINARY_OP_DEFINITION(name) \
+    ExObject name(ExObject a, ExObject b);
 
-static ExObject concatString(ExObject a, ExObject b) { // <>
-    return EX_STRING(ExObject_ToString(a) + ExObject_ToString(b));
-}
+BINARY_OP_DEFINITION(ExMath_add)
+BINARY_OP_DEFINITION(ExMath_sub)
+BINARY_OP_DEFINITION(ExMath_mul)
+BINARY_OP_DEFINITION(ExMath_div)
+
+ExObject ExMath_concatString(ExObject a, ExObject b); // <>
