@@ -3,6 +3,10 @@
 extern ExEnvironment EX_ENVIRONMENT;
 int main() {
 EX_ENVIRONMENT.push();
-ExMatch_pattern(EX_LIST({EX_LIST({EX_LIST({EX_LIST({EX_ATOM("a")})})})}), EX_LIST({EX_LIST({EX_LIST({EX_LIST({EX_NUMBER(1)})})})}));
+{
+	ExMatch_pattern(EX_ATOM("atom"), EX_ATOM("cba"));
+	ExRemote_IO_puts(EX_STRING("why?"));
+}
+;
 return 0;
 }

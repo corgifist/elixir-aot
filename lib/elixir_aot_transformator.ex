@@ -18,11 +18,11 @@ defmodule ElixirAOT.Transformator.Macros do
 end
 
 defmodule ElixirAOT.Compiler do
-  def compile(filename, code) do
+  def compile_from_cpp(filename, code) do
     File.write(filename, code)
     executable_name = hd(String.split(filename, "."))
 
-    case System.cmd("g++", ["-o", executable_name, "aotlib.cpp", "aotmathlib.cpp", filename]) do
+    case System.cmd("g++", ["-o", executable_name, "aotlib/aotlib.cpp", "aotlib/aotmathlib.cpp", filename]) do
       {output, _} -> IO.puts(output)
       _ -> IO.puts("Something unexpected occurred!")
     end
@@ -34,7 +34,7 @@ defmodule ElixirAOT.Transformator do
   require Transformator.Macros
   defstruct [:includes, :ast]
 
-  @default_includes ["\"aotgeneral.h\""]
+  @default_includes ["\"aotlib/aotgeneral.h\""]
 
   def transform(includes, ast),
     do: transform(%Transformator{includes: @default_includes ++ includes, ast: ast})
@@ -71,12 +71,12 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:*)
   Transformator.Macros.binary_op(:/)
 
-  def create_ast({var_name, _, _}, state) when state == :normal do
-    "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(var_name)}\")"
+  def create_ast({var_name, _, _}, :match) do
+    "EX_VAR(\"#{atom_to_raw_string(var_name)}\")"
   end
 
-  def create_ast({var_name, _, _}, state) when state == :match do
-    "EX_ATOM(\"#{atom_to_raw_string(var_name)}\")"
+  def create_ast({var_name, _, _}, _) do
+    "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(var_name)}\")"
   end
 
   def create_ast({expr, _}, state) do
@@ -84,7 +84,7 @@ defmodule ElixirAOT.Transformator do
   end
 
   def create_ast(x, _) when is_nil(x), do: "EX_NIL()"
-  def create_ast(x, _) when is_atom(x), do: "EX_ATOM(#{x})"
+  def create_ast(x, _) when is_atom(x), do: "EX_ATOM(\"#{x}\")"
   def create_ast(x, _) when is_number(x), do: "EX_NUMBER(#{x})"
   def create_ast(x, _) when is_binary(x), do: "EX_STRING(\"#{x}\")"
   def create_ast(x, state) when is_list(x), do: "EX_LIST(#{create_curly_list(x, state)})"
@@ -113,9 +113,15 @@ defmodule ElixirAOT.Transformator do
 
   def create_parent_args([], acc, _), do: "(" <> acc <> ")"
 
-  def create_remote([{:__aliases__, _, [module]}, target]) do
-    "ExRemote_" <> atom_to_raw_string(module) <> "_" <> atom_to_raw_string(target)
+  def create_remote([{:__aliases__, _, module}, target]) do
+    "ExRemote_" <> create_module(module) <> atom_to_raw_string(target)
   end
+
+  def create_module(module), do: create_module(module, "")
+  def create_module([name | tail], acc) do
+    create_module(tail, acc <> atom_to_raw_string(name) <> "_")
+  end
+  def create_module([], acc), do: acc
 
   def create_block(block, state), do: create_block(block, "", state)
 

@@ -9,7 +9,7 @@
 #include <cstdarg>
 
 typedef enum {
-    EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_STRING_TYPE, 
+    EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_VAR_TYPE, EX_STRING_TYPE, 
     EX_LIST_TYPE, EX_NIL_TYPE
 } ExValueType;
 
@@ -39,6 +39,8 @@ typedef struct {
 ExObject EX_LIST(std::vector<ExObject> list);
 
 ExObject EX_ATOM(std::string atom);
+
+ExObject EX_VAR(std::string var);
 
 ExObject EX_STRING(std::string str);
 

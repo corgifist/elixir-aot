@@ -7,8 +7,8 @@ extern ExEnvironment EX_ENVIRONMENT{};
 
 ExObject ExMatch_pattern(ExObject left, ExObject right) {
     switch (left.type) {
-        case EX_ATOM_TYPE: { // variable pattern
-            std::string name = ExObject_AtomToRawString(left);
+        case EX_VAR_TYPE: { // variable pattern
+            std::string name = AS_STRING(left);
             EX_ENVIRONMENT.write(name, right);
             break;
         }
@@ -142,6 +142,12 @@ ExObject EX_ATOM(std::string atom) {
     REVERSED_ATOMS[ATOMS_COUNT] = atom;
     ATOMS_COUNT++;
     return EX_ATOM(atom);
+}
+
+ExObject EX_VAR(std::string atom) {
+    ExObject result = EX_STRING(atom);
+    result.type = EX_VAR_TYPE; // only for pattern matching
+    return result;
 }
 
 ExObject EX_STRING(std::string str) {

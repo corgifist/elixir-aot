@@ -4,6 +4,7 @@ end
 
 defmodule ElixirAOT.CLI do
   alias ElixirAOT.CLI.State, as: CLIState
+  require Logger
   def main(), do: ElixirAOT.CLI.main(0)
 
   def main(index) do
@@ -19,11 +20,14 @@ defmodule ElixirAOT.CLI do
   end
 
   def parsePrompt(%CLIState{prompt: p, index: i}) do
-    ast = Code.eval_string("quote do #{p} end")
-    result = ElixirAOT.Transformator.transform([], ast)
-    IO.inspect(ast)
-    IO.puts(result)
-    ElixirAOT.Compiler.compile("aot_cli.cpp", result)
-    main(i)
+    case ElixirAOT.code_to_ast(p) do
+      :error -> Logger.error("Compilation was terminated"); main(i - 1)
+      ast -> 
+        result = ElixirAOT.Transformator.transform([], ast)
+        IO.inspect(ast)
+        IO.puts(result)
+        ElixirAOT.Compiler.compile_from_cpp("aot_cli.cpp", result)
+        main(i)
+    end
   end
 end
