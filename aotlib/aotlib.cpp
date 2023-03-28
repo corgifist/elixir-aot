@@ -32,9 +32,18 @@ ExObject ExMatch_pattern(ExObject left, ExObject right) {
     return right;
 }
 
-ExObject ExRemote_IO_puts(ExObject expr) {
-    std::cout << ExObject_ToString(expr) << std::endl;
-    return EX_ATOM("what?");
+bool ExMatch_tryMatch(ExObject left, ExObject right) {
+    try {
+        ExMatch_pattern(left, right);
+        return true;
+    } catch (std::runtime_error& ex) {
+        return false;
+    }
+}
+
+ExObject ExRemote_IO_puts(ExObject args) {
+    std::cout << ExObject_ToString(LIST_AT(args, 0)) << std::endl;
+    return EX_ATOM("ok");
 }
 
 ExObject ExEnvironment::get(std::string name) {
@@ -54,7 +63,8 @@ void ExEnvironment::push() {
         scope.push(ExBinding{});
         return;
     }
-    scope.push(scope.top());
+    ExBinding binding = scope.top();
+    scope.push(binding);
 }
 
 void ExEnvironment::pop() {
@@ -74,6 +84,9 @@ std::string ExObject_ToString(ExObject object) {
         }
         case EX_LIST_TYPE: {
             return ExObject_ListToString(object);
+        }
+        case EX_VAR_TYPE: {
+            return AS_STRING(object);
         }
         case EX_NIL_TYPE: {
             return "nil";
@@ -151,6 +164,6 @@ ExObject EX_VAR(std::string atom) {
 }
 
 ExObject EX_STRING(std::string str) {
-    std::string mstr = std::move(str);
-    return ((ExObject){EX_STRING_TYPE, {.str=&mstr}});
+    std::string* mstr = new std::string(str);
+    return ((ExObject){EX_STRING_TYPE, {.str=mstr}});
 }

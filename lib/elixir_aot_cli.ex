@@ -21,9 +21,12 @@ defmodule ElixirAOT.CLI do
 
   def parsePrompt(%CLIState{prompt: p, index: i}) do
     case ElixirAOT.code_to_ast(p) do
-      :error -> Logger.error("Compilation was terminated"); main(i - 1)
-      ast -> 
-        result = ElixirAOT.Transformator.transform([], ast)
+      :error ->
+        Logger.error("Compilation was terminated")
+        main(i - 1)
+
+      ast ->
+        result = ElixirAOT.Transformator.transform(ast)
         IO.inspect(ast)
         IO.puts(result)
         ElixirAOT.Compiler.compile_from_cpp("aot_cli.cpp", result)

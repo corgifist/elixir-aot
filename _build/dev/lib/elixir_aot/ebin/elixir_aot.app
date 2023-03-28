@@ -4,6 +4,8 @@
               {modules,['Elixir.ElixirAOT','Elixir.ElixirAOT.CLI',
                         'Elixir.ElixirAOT.CLI.State',
                         'Elixir.ElixirAOT.Compiler',
+                        'Elixir.ElixirAOT.Modules',
+                        'Elixir.ElixirAOT.Processing',
                         'Elixir.ElixirAOT.Transformator',
                         'Elixir.ElixirAOT.Transformator.Macros']},
               {registered,[]},

@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cstdarg>
+#include <tuple>
 
 typedef enum {
     EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_VAR_TYPE, EX_STRING_TYPE, 
@@ -47,6 +48,9 @@ ExObject EX_STRING(std::string str);
 ExObject ExRemote_IO_puts(ExObject expr);
 
 ExObject ExMatch_pattern(ExObject left, ExObject right);
+bool ExMatch_tryMatch(ExObject left, ExObject right);
+
+ExObject ExClause_tupleToList(std::tuple<ExObject> tuple);
 
 static std::string DoubleToString(double value) {
     std::ostringstream strs;
@@ -65,5 +69,7 @@ std::string ExObject_ListToString(ExObject list);
 #define AS_NUMBER(value) ((value).as.number)
 #define AS_LIST(value) *((std::vector<ExObject>*) (value).as.pointer)
 #define AS_STRING(value) *(value.as.str)
+
+#define LIST_AT(list, index) ((AS_LIST(list)).at(index))
 
 #define MATCH_ERROR() throw std::runtime_error("cannot match values: " + ExObject_ToString(left) + " and " + ExObject_ToString(right))

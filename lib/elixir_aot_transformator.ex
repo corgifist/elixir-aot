@@ -17,44 +17,87 @@ defmodule ElixirAOT.Transformator.Macros do
   end
 end
 
-defmodule ElixirAOT.Compiler do
-  def compile_from_cpp(filename, code) do
-    File.write(filename, code)
-    executable_name = hd(String.split(filename, "."))
-
-    case System.cmd("g++", ["-o", executable_name, "aotlib/aotlib.cpp", "aotlib/aotmathlib.cpp", filename]) do
-      {output, _} -> IO.puts(output)
-      _ -> IO.puts("Something unexpected occurred!")
-    end
-  end
-end
-
 defmodule ElixirAOT.Transformator do
   alias ElixirAOT.Transformator, as: Transformator
   require Transformator.Macros
-  defstruct [:includes, :ast]
 
-  @default_includes ["\"aotlib/aotgeneral.h\""]
+  @clause_identifier_limit 1_000_000
 
-  def transform(includes, ast),
-    do: transform(%Transformator{includes: @default_includes ++ includes, ast: ast})
+  def transform(ast) do
+    ElixirAOT.Processing.setup()
 
-  def transform(transformator) do
-    create_include(transformator.includes) <>
-      "extern ExEnvironment EX_ENVIRONMENT;\n" <>
+    base_code =
       "int main() {\n" <>
-      "EX_ENVIRONMENT.push();\n" <>
-      create_ast(transformator.ast) <>
-      ";" <>
-      "\n" <>
-      "return 0;\n" <>
-      "}"
+        "EX_ENVIRONMENT.push();\n" <>
+        create_ast(ast) <>
+        ";" <>
+        "\n" <>
+        "return 0;\n" <>
+        "}"
+
+    processed_code =
+      ElixirAOT.Processing.get_includes() <>
+        "\n" <>
+        "extern ExEnvironment EX_ENVIRONMENT;\n" <>
+        ElixirAOT.Processing.get_modules() <>
+        "\n" <>
+        base_code
+
+    ElixirAOT.Processing.terminate()
+    processed_code
   end
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast({:defmodule, _, [name_alias, [do: body]]}, _) do
+    atom_alias = String.to_atom(destruct_alias(name_alias))
+    # clause management table
+    ElixirAOT.Processing.create_table(atom_alias)
+    # module functions list
+    ElixirAOT.Processing.create_table(:ex_aot_functions_list)
+    create_ast(body, {:module, atom_alias})
+    module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
+    ElixirAOT.Processing.add_module(module_code)
+    # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
+    ""
+  end
+
+  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, {:module, module_alias}) do
+    clause_name =
+      "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
+        Kernel.inspect(Enum.random(0..@clause_identifier_limit))
+
+    clause_body =
+      "ExObject #{clause_name}() {\n" <>
+        "ExObject exReturn = EX_NIL();\n" <>
+        create_return_block(body) <>
+        "\n" <>
+        "return exReturn;\n" <>
+        "}\n"
+
+    # clause functions table
+    def_table = String.to_atom(clause_name)
+    def_original_name = "#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}"
+    # IO.puts(def_original_name)
+    case :ets.whereis(def_table) do
+      :undefined ->
+        ElixirAOT.Processing.create_table(def_table)
+        ElixirAOT.Processing.create_table(String.to_atom(def_original_name))
+
+      _ ->
+        :ok
+    end
+
+    :ets.insert(def_table, {clause_name, clause_body, args, def_original_name})
+    :ets.insert(:ex_aot_functions_list, {def_table})
+    :ets.insert(String.to_atom(def_original_name), {def_table})
+    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    ""
+  end
+
   def create_ast({{:., _, remote_alias}, _, args}, state) do
-    create_remote(remote_alias) <> create_parent_args(args, state)
+    create_remote(remote_alias) <> "(#{create_ast(args, state)})"
   end
 
   def create_ast({:__block__, _, block}, state) do
@@ -64,7 +107,6 @@ defmodule ElixirAOT.Transformator do
   def create_ast({:=, _, [left, right]}, state) do
     "ExMatch_pattern(#{create_ast(left, :match)}, #{create_ast(right, state)})"
   end
-
 
   Transformator.Macros.binary_op(:+)
   Transformator.Macros.binary_op(:-)
@@ -89,16 +131,17 @@ defmodule ElixirAOT.Transformator do
   def create_ast(x, _) when is_binary(x), do: "EX_STRING(\"#{x}\")"
   def create_ast(x, state) when is_list(x), do: "EX_LIST(#{create_curly_list(x, state)})"
 
-  def create_ast(x, _state) do
+  def create_ast(x, _) do
     Kernel.inspect(x)
   end
 
+  def create_curly_list([object], state, acc),
+    do: create_curly_list([], state, acc <> create_ast(object, state))
 
-  def create_curly_list([object], state, acc), do: 
-    create_curly_list([], state, acc <> create_ast(object, state))
   def create_curly_list([object | tail], state, acc),
     do: create_curly_list(tail, state, acc <> create_ast(object, state) <> ", ")
-  def create_curly_list([], _, acc), do:  "{" <> acc <> "}"
+
+  def create_curly_list([], _, acc), do: "{" <> acc <> "}"
   def create_curly_list(x, state), do: create_curly_list(x, state, "")
 
   def create_parent_args(args, state), do: create_parent_args(args, "", state)
@@ -117,11 +160,26 @@ defmodule ElixirAOT.Transformator do
     "ExRemote_" <> create_module(module) <> atom_to_raw_string(target)
   end
 
+  def destruct_alias({:__aliases__, _, module}) do
+    create_module(module)
+  end
+
   def create_module(module), do: create_module(module, "")
+
   def create_module([name | tail], acc) do
     create_module(tail, acc <> atom_to_raw_string(name) <> "_")
   end
+
   def create_module([], acc), do: acc
+
+  def create_return_block([], acc), do: "{\n" <> acc <> "}\n"
+
+  def create_return_block([ast | tail], acc) do
+    create_return_block(tail, acc <> "exReturn = " <> create_ast(ast) <> "\n")
+  end
+
+  def create_return_block({:__block__, _, body}), do: create_return_block(body, "")
+  def create_return_block(expr), do: "exReturn = #{create_ast(expr)};"
 
   def create_block(block, state), do: create_block(block, "", state)
 
@@ -131,11 +189,5 @@ defmodule ElixirAOT.Transformator do
 
   def create_block([], acc, _), do: acc
 
-  def create_include(includes), do: create_include(includes, "")
-
-  def create_include([include | tail], acc),
-    do: create_include(tail, "#include #{include}\n" <> acc)
-
-  def create_include([], acc), do: acc <> "\n"
   def atom_to_raw_string(atom), do: String.replace(Kernel.inspect(atom), ":", "")
 end
