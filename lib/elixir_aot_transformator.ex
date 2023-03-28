@@ -52,12 +52,14 @@ defmodule ElixirAOT.Transformator do
   def create_ast({:defmodule, _, [name_alias, [do: body]]}, _) do
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
-    ElixirAOT.Processing.create_table(atom_alias)
+    ElixirAOT.Modules.setup()
+    ElixirAOT.Modules.create_table(atom_alias)
     # module functions list
-    ElixirAOT.Processing.create_table(:ex_aot_functions_list)
+    ElixirAOT.Modules.create_table(:ex_aot_functions_list)
     create_ast(body, {:module, atom_alias})
     module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
     ElixirAOT.Processing.add_module(module_code)
+    ElixirAOT.Modules.terminate_module_tables()
     # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
     ""
   end
@@ -81,8 +83,8 @@ defmodule ElixirAOT.Transformator do
     # IO.puts(def_original_name)
     case :ets.whereis(def_table) do
       :undefined ->
-        ElixirAOT.Processing.create_table(def_table)
-        ElixirAOT.Processing.create_table(String.to_atom(def_original_name))
+        ElixirAOT.Modules.create_table(def_table)
+        ElixirAOT.Modules.create_table(String.to_atom(def_original_name))
 
       _ ->
         :ok

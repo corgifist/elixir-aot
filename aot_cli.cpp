@@ -1,21 +1,29 @@
 #include "aotlib/aotgeneral.h"
 
 extern ExEnvironment EX_ENVIRONMENT;
-ExObject ExModule_Test_test1_Clause546594() {
+ExObject ExModule_Math_sum_Clause267255() {
 ExObject exReturn = EX_NIL();
-{
-exReturn = ExRemote_IO_puts(EX_LIST({EX_STRING("Test1")}));
-exReturn = ExMatch_pattern(EX_VAR("a"), EX_NUMBER(5));
+exReturn = ExMath_add(EX_ENVIRONMENT.get("a"), EX_ENVIRONMENT.get("a"));
+return exReturn;
 }
 
+ExObject ExModule_Math_sum_Clause959050() {
+ExObject exReturn = EX_NIL();
+exReturn = ExMath_add(EX_ENVIRONMENT.get("a"), EX_ENVIRONMENT.get("b"));
 return exReturn;
 }
 
 
-ExObject ExRemote_Test_test1(ExObject arguments) {
+ExObject ExRemote_Math_sum(ExObject arguments) {
 	EX_ENVIRONMENT.push();
-	if (ExMatch_tryMatch(EX_LIST({}), arguments)) {
-		ExObject result = ExModule_Test_test1_Clause546594();
+	if (ExMatch_tryMatch(EX_LIST({EX_VAR("a"), EX_VAR("b")}), arguments)) {
+		ExObject result = ExModule_Math_sum_Clause959050();
+		EX_ENVIRONMENT.pop();
+	return result;
+	}
+	EX_ENVIRONMENT.push();
+	if (ExMatch_tryMatch(EX_LIST({EX_VAR("a")}), arguments)) {
+		ExObject result = ExModule_Math_sum_Clause267255();
 		EX_ENVIRONMENT.pop();
 	return result;
 	}
@@ -29,8 +37,7 @@ int main() {
 EX_ENVIRONMENT.push();
 {
 	;
-	ExRemote_Test_test1(EX_LIST({}));
-	ExRemote_IO_puts(EX_LIST({EX_ENVIRONMENT.get("a")}));
+	ExRemote_IO_puts(EX_LIST({ExRemote_Math_sum(EX_LIST({ExRemote_Math_sum(EX_LIST({EX_NUMBER(1), EX_NUMBER(1)}))}))}));
 }
 ;
 return 0;

@@ -1,7 +1,14 @@
 defmodule ElixirAOT.Processing do
   def setup() do
     # do not remove!
-    :ets.new(:ex_aot_ets_registry, [:named_table, :set, :public])
+    case :ets.whereis(:ex_aot_ets_registry) do
+      :undefined ->
+        :ets.new(:ex_aot_ets_registry, [:named_table, :set, :public])
+
+      _ ->
+        :ok
+    end
+
     create_table(:ex_aot_includes)
     create_table(:ex_aot_modules)
     add_include("\"aotlib/aotgeneral.h\"")
@@ -48,7 +55,7 @@ defmodule ElixirAOT.Processing do
         :ets.new(name, [:named_table, :set, :public])
         :ets.insert(:ex_aot_ets_registry, {name})
 
-      x ->
+      _ ->
         :ok
     end
   end

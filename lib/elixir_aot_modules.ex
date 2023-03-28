@@ -1,11 +1,21 @@
 defmodule ElixirAOT.Modules do
+  def setup() do
+    case :ets.whereis(:ex_aot_module_table_registry) do
+      :undefined ->
+        :ets.new(:ex_aot_module_table_registry, [:set, :named_table, :public])
+
+      _ ->
+        :ok
+    end
+  end
+
   def create_module_functions(_) do
     ElixirAOT.Processing.create_table(:ex_aot_processed_functions)
     functions_list = flat_single_ets(:ex_aot_functions_list)
     create_clauses(functions_list) <> "\n" <> create_managers(functions_list)
   end
 
-  def create_managers(functions), do: create_managers(functions, "")
+  def create_managers(functions), do: create_managers(Enum.reverse(functions), "")
   def create_managers([], acc), do: acc
 
   def create_managers([function | tail], acc) do
@@ -30,7 +40,7 @@ defmodule ElixirAOT.Modules do
     end
   end
 
-  def create_matching(clauses), do: create_matching(clauses, "")
+  def create_matching(clauses), do: create_matching(Enum.reverse(clauses), "")
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
@@ -38,12 +48,13 @@ defmodule ElixirAOT.Modules do
 
     create_matching(
       tail,
-      "\tEX_ENVIRONMENT.push();\n" <>
+      acc <>
+        "\tEX_ENVIRONMENT.push();\n" <>
         "\tif (ExMatch_tryMatch(#{ElixirAOT.Transformator.create_ast(args, :match)}, arguments)) {\n" <>
         "\t\tExObject result = #{Kernel.to_string(clause)}();\n" <>
         "\t\tEX_ENVIRONMENT.pop();\n" <>
         "\treturn result;\n" <>
-        "\t}\n" <> acc
+        "\t}\n"
     )
   end
 
@@ -65,4 +76,30 @@ defmodule ElixirAOT.Modules do
   def reconstruct_clause_name(name), do: hd(String.split(name, "_Clause")) <> "_Clause"
 
   def atom_to_raw_string(atom), do: String.replace(Kernel.inspect(atom), ":", "")
+
+  def terminate_module_tables(),
+    do: terminate_module_tables(:ets.tab2list(:ex_aot_module_table_registry))
+
+  def terminate_module_tables([]), do: :ok
+
+  def terminate_module_tables([{table} | tail]) do
+    case :ets.whereis(table) do
+      :undefined -> :unexcpected
+      _ -> :ets.delete(table)
+    end
+
+    terminate_module_tables(tail)
+  end
+
+  def create_table(name) do
+    case :ets.whereis(name) do
+      :undefined ->
+        :ets.new(name, [:set, :named_table, :public])
+
+      _ ->
+        :ok
+    end
+
+    :ets.insert(:ex_aot_module_table_registry, {name})
+  end
 end
