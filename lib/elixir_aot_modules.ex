@@ -1,5 +1,5 @@
 defmodule ElixirAOT.Modules do
-  def create_module_functions(module) do
+  def create_module_functions(_) do
     ElixirAOT.Processing.create_table(:ex_aot_processed_functions)
     functions_list = flat_single_ets(:ex_aot_functions_list)
     create_clauses(functions_list) <> "\n" <> create_managers(functions_list)
@@ -9,21 +9,24 @@ defmodule ElixirAOT.Modules do
   def create_managers([], acc), do: acc
 
   def create_managers([function | tail], acc) do
-    [{function, clause_code, args, original_name}] =
-      :ets.lookup(function, atom_to_raw_string(function))
+    [{_, _, _, original_name}] = :ets.lookup(function, atom_to_raw_string(function))
 
     case :ets.lookup(:ex_aot_processed_functions, original_name) do
       [] ->
         :ets.insert(:ex_aot_processed_functions, {original_name})
         function_clauses = flat_single_ets(String.to_atom(original_name))
 
-        "ExObject ExRemote_#{original_name}(ExObject arguments) {\n" <>
-          create_matching(function_clauses) <>
-          "throw std::runtime_error(\"cannot find suitable clause for function call!\");\n" <>
-          "}\n"
+        create_managers(
+          tail,
+          acc <>
+            "ExObject ExRemote_#{original_name}(ExObject arguments) {\n" <>
+            create_matching(function_clauses) <>
+            "throw std::runtime_error(\"cannot find suitable clause for function call!\");\n" <>
+            "}\n" <> "\n"
+        )
 
-      x ->
-        ""
+      _ ->
+        create_managers(tail, acc)
     end
   end
 
@@ -31,7 +34,7 @@ defmodule ElixirAOT.Modules do
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
-    [{clause, clause_code, args, original_name}] = :ets.lookup(clause, atom_to_raw_string(clause))
+    [{clause, _, args, _}] = :ets.lookup(clause, atom_to_raw_string(clause))
 
     create_matching(
       tail,
@@ -48,7 +51,7 @@ defmodule ElixirAOT.Modules do
   def create_clauses([], acc), do: acc
 
   def create_clauses([function | tail], acc) do
-    [{function, clause_code, _, _}] = :ets.lookup(function, atom_to_raw_string(function))
+    [{_, clause_code, _, _}] = :ets.lookup(function, atom_to_raw_string(function))
     create_clauses(tail, acc <> clause_code <> "\n")
   end
 

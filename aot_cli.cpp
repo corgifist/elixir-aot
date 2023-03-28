@@ -1,29 +1,33 @@
 #include "aotlib/aotgeneral.h"
 
 extern ExEnvironment EX_ENVIRONMENT;
-ExObject ExModule_Math_sum_Clause774165() {
+ExObject ExModule_Test_b_Clause193779() {
 ExObject exReturn = EX_NIL();
-exReturn = ExMath_add(EX_ENVIRONMENT.get("a"), EX_ENVIRONMENT.get("a"));
+exReturn = EX_ATOM("b");
 return exReturn;
 }
 
-ExObject ExModule_Math_sum_Clause787144() {
+ExObject ExModule_Test_a_Clause975503() {
 ExObject exReturn = EX_NIL();
-exReturn = ExMath_add(EX_ENVIRONMENT.get("a"), EX_ENVIRONMENT.get("b"));
+exReturn = EX_ATOM("a");
 return exReturn;
 }
 
 
-ExObject ExRemote_Math_sum(ExObject arguments) {
+ExObject ExRemote_Test_b(ExObject arguments) {
 	//EX_ENVIRONMENT.push();
-	if (ExMatch_tryMatch(EX_LIST({EX_VAR("a"), EX_VAR("b")}), arguments)) {
-		ExObject result = ExModule_Math_sum_Clause787144();
+	if (ExMatch_tryMatch(EX_LIST({}), arguments)) {
+		ExObject result = ExModule_Test_b_Clause193779();
 		//EX_ENVIRONMENT.pop();
 	return result;
 	}
+throw std::runtime_error("cannot find suitable clause for function call!");
+}
+
+ExObject ExRemote_Test_a(ExObject arguments) {
 	//EX_ENVIRONMENT.push();
-	if (ExMatch_tryMatch(EX_LIST({EX_VAR("a")}), arguments)) {
-		ExObject result = ExModule_Math_sum_Clause774165();
+	if (ExMatch_tryMatch(EX_LIST({}), arguments)) {
+		ExObject result = ExModule_Test_a_Clause975503();
 		//EX_ENVIRONMENT.pop();
 	return result;
 	}
@@ -32,11 +36,13 @@ throw std::runtime_error("cannot find suitable clause for function call!");
 
 
 
+
 int main() {
 EX_ENVIRONMENT.push();
 {
 	;
-	ExRemote_IO_puts(EX_LIST({ExRemote_Math_sum(EX_LIST({EX_NUMBER(1)}))}));
+	ExRemote_IO_puts(EX_LIST({ExRemote_Test_a(EX_LIST({}))}));
+	ExRemote_IO_puts(EX_LIST({ExRemote_Test_b(EX_LIST({}))}));
 }
 ;
 return 0;
