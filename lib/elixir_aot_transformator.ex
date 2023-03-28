@@ -175,7 +175,7 @@ defmodule ElixirAOT.Transformator do
   def create_return_block([], acc), do: "{\n" <> acc <> "}\n"
 
   def create_return_block([ast | tail], acc) do
-    create_return_block(tail, acc <> "exReturn = " <> create_ast(ast) <> "\n")
+    create_return_block(tail, acc <> "exReturn = " <> create_ast(ast) <> ";\n")
   end
 
   def create_return_block({:__block__, _, body}), do: create_return_block(body, "")

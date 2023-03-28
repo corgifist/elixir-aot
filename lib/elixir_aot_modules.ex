@@ -38,10 +38,10 @@ defmodule ElixirAOT.Modules do
 
     create_matching(
       tail,
-      "\t//EX_ENVIRONMENT.push();\n" <>
+      "\tEX_ENVIRONMENT.push();\n" <>
         "\tif (ExMatch_tryMatch(#{ElixirAOT.Transformator.create_ast(args, :match)}, arguments)) {\n" <>
         "\t\tExObject result = #{Kernel.to_string(clause)}();\n" <>
-        "\t\t//EX_ENVIRONMENT.pop();\n" <>
+        "\t\tEX_ENVIRONMENT.pop();\n" <>
         "\treturn result;\n" <>
         "\t}\n" <> acc
     )
