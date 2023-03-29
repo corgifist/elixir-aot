@@ -11,7 +11,6 @@ defmodule ElixirAOT do
     ast = code_to_ast(source)
     ElixirAOT.Compiler.compile_from_cpp(hd(String.split(filename, ".")) <> ".cpp", ElixirAOT.Transformator.transform(ast))
     IO.inspect(ast)
-    IO.puts(:os.cmd("./#{hd(String.split(filename, "."))}" |> String.to_charlist))
   end
 
   def code_to_ast(ast) do

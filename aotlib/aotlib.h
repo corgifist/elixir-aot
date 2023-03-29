@@ -11,7 +11,7 @@
 
 typedef enum {
     EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_VAR_TYPE, EX_STRING_TYPE, 
-    EX_LIST_TYPE, EX_NIL_TYPE
+    EX_LIST_TYPE, EX_CONS_TYPE, EX_NIL_TYPE
 } ExValueType;
 
 typedef struct {
@@ -24,6 +24,10 @@ typedef struct {
         void* pointer;
     } as;
 } ExObject;
+
+typedef struct {
+    ExObject head, tail;
+} ExCons;
 
 typedef std::unordered_map<std::string, ExObject> ExBinding;
 
@@ -44,6 +48,9 @@ ExObject EX_ATOM(std::string atom);
 ExObject EX_VAR(std::string var);
 
 ExObject EX_STRING(std::string str);
+
+ExObject EX_CONS(ExObject head, ExObject tail);
+ExObject CONS_AS_LIST(ExObject cons);
 
 ExObject ExRemote_IO_puts(ExObject expr);
 
@@ -68,7 +75,10 @@ std::string ExObject_ListToString(ExObject list);
 
 #define AS_NUMBER(value) ((value).as.number)
 #define AS_LIST(value) *((std::vector<ExObject>*) (value).as.pointer)
+#define AS_CONS(value) *((ExCons*) (value).as.pointer)
 #define AS_STRING(value) *(value.as.str)
+
+#define BOOL_AS_ATOM(value) ((value) ? EX_ATOM("true") : EX_ATOM("false"))
 
 #define LIST_AT(list, index) ((AS_LIST(list)).at(index))
 

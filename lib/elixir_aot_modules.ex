@@ -2,7 +2,7 @@ defmodule ElixirAOT.Modules do
   def setup() do
     case :ets.whereis(:ex_aot_module_table_registry) do
       :undefined ->
-        :ets.new(:ex_aot_module_table_registry, [:set, :named_table, :ordered_set, :public])
+        :ets.new(:ex_aot_module_table_registry, [:named_table, :ordered_set, :public])
 
       _ ->
         :ok
@@ -15,7 +15,7 @@ defmodule ElixirAOT.Modules do
     create_clauses(functions_list) <> "\n" <> create_managers(functions_list)
   end
 
-  def create_managers(functions), do: create_managers(Enum.reverse(functions), "")
+  def create_managers(functions), do: create_managers(functions, "")
   def create_managers([], acc), do: acc
 
   def create_managers([function | tail], acc) do
@@ -41,7 +41,7 @@ defmodule ElixirAOT.Modules do
     end
   end
 
-  def create_matching(clauses), do: create_matching(clauses, "")
+  def create_matching(clauses), do: create_matching(Enum.reverse(clauses), "")
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
@@ -74,7 +74,7 @@ defmodule ElixirAOT.Modules do
     flat_single_ets(tail, [function | acc])
   end
 
-  def flat_single_ets([], acc), do: Enum.reverse(acc)
+  def flat_single_ets([], acc), do: acc
   def flat_single_ets(table), do: flat_single_ets(:ets.tab2list(table), [])
 
   def reconstruct_clause_name(name), do: hd(String.split(name, "_Clause")) <> "_Clause"
@@ -98,7 +98,7 @@ defmodule ElixirAOT.Modules do
   def create_table(name) do
     case :ets.whereis(name) do
       :undefined ->
-        :ets.new(name, [:set, :named_table, :public])
+        :ets.new(name, [:ordered_set, :named_table, :public])
 
       _ ->
         :ok

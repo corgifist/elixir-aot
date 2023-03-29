@@ -3,7 +3,7 @@ defmodule ElixirAOT.Processing do
     # do not remove!
     case :ets.whereis(:ex_aot_ets_registry) do
       :undefined ->
-        :ets.new(:ex_aot_ets_registry, [:named_table, :set, :ordered_set, :public])
+        :ets.new(:ex_aot_ets_registry, [:named_table, :ordered_set, :public])
 
       _ ->
         :ok
@@ -61,7 +61,7 @@ defmodule ElixirAOT.Processing do
   def create_table(name) do
     case :ets.whereis(name) do
       :undefined ->
-        :ets.new(name, [:named_table, :set, :public])
+        :ets.new(name, [:named_table, :ordered_set, :public])
         :ets.insert(:ex_aot_ets_registry, {name})
 
       _ ->

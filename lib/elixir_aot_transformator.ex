@@ -50,6 +50,10 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast({:|, _, [head, tail]}, state) do
+    "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
+  end
+
   def create_ast({:defmodule, _, [name_alias, [do: body]]}, _) do
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
@@ -93,10 +97,10 @@ defmodule ElixirAOT.Transformator do
     end
     ElixirAOT.Processing.add_predefine(clause_name <> "()")
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, guard, state})
-    :ets.insert(:ex_aot_functions_list, {def_table})
-    :ets.insert(String.to_atom(def_original_name), {def_table})
-    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
-    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    append_ets_table(:ex_aot_functions_list, {def_table})
+    append_ets_table(String.to_atom(def_original_name), {def_table})
+    IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
     ""
   end
 
@@ -130,8 +134,8 @@ defmodule ElixirAOT.Transformator do
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, true, state})
     :ets.insert(:ex_aot_functions_list, {def_table})
     :ets.insert(String.to_atom(def_original_name), {def_table})
-    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
-    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
     ""
   end
 
@@ -236,4 +240,24 @@ defmodule ElixirAOT.Transformator do
   def create_block([], acc, _), do: acc
 
   def atom_to_raw_string(atom), do: String.replace(Kernel.inspect(atom), ":", "")
+
+  def append_ets_table(table, function) do
+    source = adapt_ets_table_list(:ets.tab2list(table))
+    :ets.delete(table)
+    :ets.new(table, [:named_table, :ordered_set, :public])
+    :ets.insert(table, concat_tuples(source, function))
+  end
+
+  def adapt_ets_table_list([]), do: []
+  def adapt_ets_table_list(x), do: hd(x)
+
+  def adapt_empty_tuple({}), do: []
+  def adapt_empty_tuple([]), do: []
+  def adapt_empty_tuple(x), do: Tuple.to_list(x)
+
+  def concat_tuples(a, b) do
+    List.to_tuple(
+      adapt_empty_tuple(a) ++ adapt_empty_tuple(b)
+    )
+  end
 end

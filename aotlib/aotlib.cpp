@@ -24,6 +24,17 @@ ExObject ExMatch_pattern(ExObject left, ExObject right) {
             }
             break;
         }
+        case EX_CONS_TYPE: { // cons type
+            ExCons leftCons = AS_CONS(left);
+            std::vector<ExObject> rightCons = AS_LIST(right);
+            ExMatch_pattern(leftCons.head, rightCons.at(0));
+            std::vector<ExObject> cutTail;
+            for (int i = 1; i < rightCons.size(); i++) {
+                cutTail.push_back(rightCons.at(i));
+            }
+            ExMatch_pattern(leftCons.tail, EX_LIST(cutTail));
+            break;
+        }
         default: { // constant pattern
             if (!ExObject_equals(left, right)) 
                 MATCH_ERROR();
@@ -88,6 +99,16 @@ std::string ExObject_ToString(ExObject object) {
         case EX_VAR_TYPE: {
             return AS_STRING(object);
         }
+        case EX_CONS_TYPE: {
+            ExCons cons = AS_CONS(object);
+            std::vector<ExObject> futurePreview;
+            futurePreview.push_back(cons.head);
+            std::vector<ExObject> tailVector = AS_LIST(cons.tail);
+            for (auto& object : tailVector) {
+                futurePreview.push_back(object);
+            }
+            return ExObject_ToString(EX_LIST(futurePreview));
+        }
         case EX_NIL_TYPE: {
             return "nil";
         }
@@ -135,6 +156,12 @@ bool ExObject_equals(ExObject a, ExObject b) {
             }
             return true;
         }
+        case EX_CONS_TYPE: {
+            ExCons aCons = AS_CONS(a);
+            ExCons bCons = AS_CONS(b);
+            return ExObject_equals(aCons.head, bCons.head) &&
+                    ExObject_equals(aCons.tail, aCons.tail);
+        }
         case EX_NIL_TYPE: {
             return a.type == b.type;
         }
@@ -160,6 +187,16 @@ ExObject EX_ATOM(std::string atom) {
 ExObject EX_VAR(std::string atom) {
     ExObject result = EX_STRING(atom);
     result.type = EX_VAR_TYPE; // only for pattern matching
+    return result;
+}
+
+ExObject EX_CONS(ExObject head, ExObject tail) {
+    ExCons cons{};
+    cons.head = head;
+    cons.tail = tail;
+    ExObject result{};
+    result.type = EX_CONS_TYPE;
+    result.as.pointer = &cons;
     return result;
 }
 
