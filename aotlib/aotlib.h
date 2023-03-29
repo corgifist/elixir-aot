@@ -72,4 +72,6 @@ std::string ExObject_ListToString(ExObject list);
 
 #define LIST_AT(list, index) ((AS_LIST(list)).at(index))
 
+#define IS_TRUE(atom) (ExObject_ToString(atom)) == ":true"
+
 #define MATCH_ERROR() throw std::runtime_error("cannot match values: " + ExObject_ToString(left) + " and " + ExObject_ToString(right))

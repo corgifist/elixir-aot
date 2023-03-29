@@ -6,6 +6,14 @@ defmodule ElixirAOT do
   """
   require Logger
 
+  def execute_file(filename) do
+    source = File.read!(filename)
+    ast = code_to_ast(source)
+    ElixirAOT.Compiler.compile_from_cpp(hd(String.split(filename, ".")) <> ".cpp", ElixirAOT.Transformator.transform(ast))
+    IO.inspect(ast)
+    IO.puts(:os.cmd("./#{hd(String.split(filename, "."))}" |> String.to_charlist))
+  end
+
   def code_to_ast(ast) do
     case Code.string_to_quoted(ast) do
       {:ok, ast} ->

@@ -39,6 +39,7 @@ defmodule ElixirAOT.Transformator do
       ElixirAOT.Processing.get_includes() <>
         "\n" <>
         "extern ExEnvironment EX_ENVIRONMENT;\n" <>
+        ElixirAOT.Processing.get_predefines() <>
         ElixirAOT.Processing.get_modules() <>
         "\n" <>
         base_code
@@ -56,7 +57,7 @@ defmodule ElixirAOT.Transformator do
     ElixirAOT.Modules.create_table(atom_alias)
     # module functions list
     ElixirAOT.Modules.create_table(:ex_aot_functions_list)
-    create_ast(body, {:module, atom_alias})
+    create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body)})
     module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
     ElixirAOT.Processing.add_module(module_code)
     ElixirAOT.Modules.terminate_module_tables()
@@ -64,7 +65,8 @@ defmodule ElixirAOT.Transformator do
     ""
   end
 
-  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, {:module, module_alias}) do
+  # FUNCTIONS WITH GUARDS
+  def create_ast({:def, _, [{:when, _, [{fn_name, _, args}, guard]}, [do: body]]}, state = {:module, module_alias, _}) do
     clause_name =
       "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
         Kernel.inspect(Enum.random(0..@clause_identifier_limit))
@@ -72,7 +74,7 @@ defmodule ElixirAOT.Transformator do
     clause_body =
       "ExObject #{clause_name}() {\n" <>
         "ExObject exReturn = EX_NIL();\n" <>
-        create_return_block(body) <>
+        create_return_block(body, state) <>
         "\n" <>
         "return exReturn;\n" <>
         "}\n"
@@ -89,8 +91,43 @@ defmodule ElixirAOT.Transformator do
       _ ->
         :ok
     end
+    ElixirAOT.Processing.add_predefine(clause_name <> "()")
+    :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, guard, state})
+    :ets.insert(:ex_aot_functions_list, {def_table})
+    :ets.insert(String.to_atom(def_original_name), {def_table})
+    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    ""
+  end
 
-    :ets.insert(def_table, {clause_name, clause_body, args, def_original_name})
+  # FUNCTIONS WITHOUT GUARDS
+  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, state = {:module, module_alias, _}) do
+    clause_name =
+      "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
+        Kernel.inspect(Enum.random(0..@clause_identifier_limit))
+
+    clause_body =
+      "ExObject #{clause_name}() {\n" <>
+        "ExObject exReturn = EX_NIL();\n" <>
+        create_return_block(body, state) <>
+        "\n" <>
+        "return exReturn;\n" <>
+        "}\n"
+
+    # clause functions table
+    def_table = String.to_atom(clause_name)
+    def_original_name = "#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}"
+    # IO.puts(def_original_name)
+    case :ets.whereis(def_table) do
+      :undefined ->
+        ElixirAOT.Modules.create_table(def_table)
+        ElixirAOT.Modules.create_table(String.to_atom(def_original_name))
+
+      _ ->
+        :ok
+    end
+    ElixirAOT.Processing.add_predefine(clause_name <> "()")
+    :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, true, state})
     :ets.insert(:ex_aot_functions_list, {def_table})
     :ets.insert(String.to_atom(def_original_name), {def_table})
     # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
@@ -115,11 +152,18 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:*)
   Transformator.Macros.binary_op(:/)
 
-  def create_ast({var_name, _, _}, :match) do
+  def create_ast({fn_name, _, args}, state = {:module, module_alias, traverse_list}) when is_list(args) do
+    case fn_name in traverse_list do
+      true -> "ExRemote_#{Kernel.to_string(module_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
+      _ -> "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(fn_name)}\")"
+    end
+  end
+
+  def create_ast({var_name, _, context}, :match) when is_atom(context) do
     "EX_VAR(\"#{atom_to_raw_string(var_name)}\")"
   end
 
-  def create_ast({var_name, _, _}, _) do
+  def create_ast({var_name, _, context}, _) when is_atom(context) do
     "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(var_name)}\")"
   end
 
@@ -174,14 +218,14 @@ defmodule ElixirAOT.Transformator do
 
   def create_module([], acc), do: acc
 
-  def create_return_block([], acc), do: "{\n" <> acc <> "}\n"
+  def create_return_block([], acc, _), do: "{\n" <> acc <> "}\n"
 
-  def create_return_block([ast | tail], acc) do
-    create_return_block(tail, acc <> "exReturn = " <> create_ast(ast) <> ";\n")
+  def create_return_block([ast | tail], acc, state) do
+    create_return_block(tail, acc <> "exReturn = " <> create_ast(ast, state) <> ";\n", state)
   end
 
-  def create_return_block({:__block__, _, body}), do: create_return_block(body, "")
-  def create_return_block(expr), do: "exReturn = #{create_ast(expr)};"
+  def create_return_block({:__block__, _, body}, state), do: create_return_block(body, "", state)
+  def create_return_block(expr, state), do: "exReturn = #{create_ast(expr, state)};"
 
   def create_block(block, state), do: create_block(block, "", state)
 

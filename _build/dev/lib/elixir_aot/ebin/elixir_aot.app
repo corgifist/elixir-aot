@@ -7,6 +7,7 @@
                         'Elixir.ElixirAOT.Modules',
                         'Elixir.ElixirAOT.Processing',
                         'Elixir.ElixirAOT.Transformator',
-                        'Elixir.ElixirAOT.Transformator.Macros']},
+                        'Elixir.ElixirAOT.Transformator.Macros',
+                        'Elixir.ElixirAOT.Traverser']},
               {registered,[]},
               {vsn,"0.1.0"}]}.
