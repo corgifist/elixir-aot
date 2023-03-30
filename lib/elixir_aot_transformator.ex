@@ -7,7 +7,13 @@ defmodule ElixirAOT.Transformator.Macros do
           :- => "ExMath_sub",
           :* => "ExMath_mul",
           :/ => "ExMath_div",
-          :<> => "ExMath_concatString"
+          :<> => "ExMath_concatString",
+          :< => "ExMath_less",
+          :> => "ExMath_greater",
+          :<= => "ExMath_lessEqual",
+          :>= => "ExMath_greaterEqual",
+          :== => "ExMath_equal",
+          :!= => "ExMath_notEqual"
         }
 
         cpp_math_methods[op] <>
@@ -50,7 +56,7 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
-  def create_ast({:|, _, [head, tail]}, state) do
+  def create_ast([{:|, _, [head, tail]}], state = :match) do
     "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
   end
 
@@ -155,6 +161,13 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:-)
   Transformator.Macros.binary_op(:*)
   Transformator.Macros.binary_op(:/)
+
+  Transformator.Macros.binary_op(:==)
+  Transformator.Macros.binary_op(:!=)
+  Transformator.Macros.binary_op(:<)
+  Transformator.Macros.binary_op(:>)
+  Transformator.Macros.binary_op(:<=)
+  Transformator.Macros.binary_op(:>=)
 
   def create_ast({fn_name, _, args}, state = {:module, module_alias, traverse_list}) when is_list(args) do
     case fn_name in traverse_list do

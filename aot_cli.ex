@@ -1,9 +1,9 @@
-defmodule Checker do
-    def is_true(x) when x do
-        "true yeeeah"
+defmodule HT do
+    def sum_all(list), do: sum_all(list, 0)
+    def sum_all([], acc), do: acc
+    def sum_all([expr | tail], acc) do
+        sum_all(tail, expr + acc)
     end
-    def is_true(x), do: "not true uhhh"
 end
 
-IO.puts(Checker.is_true(:true))
-IO.puts(Checker.is_true(:abc))
+IO.puts(HT.sum_all([1, 2, 3]))

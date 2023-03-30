@@ -172,7 +172,7 @@ bool ExObject_equals(ExObject a, ExObject b) {
 ExObject EX_LIST(std::vector<ExObject> list) {
     ExObject result{};
     result.type = EX_LIST_TYPE;
-    result.as.pointer = &list;
+    result.as.pointer = (void*) new std::vector<ExObject>(list);
     return result;
 }
 
@@ -191,12 +191,12 @@ ExObject EX_VAR(std::string atom) {
 }
 
 ExObject EX_CONS(ExObject head, ExObject tail) {
-    ExCons cons{};
-    cons.head = head;
-    cons.tail = tail;
+    ExCons* cons = new ExCons();
+    cons->head = head;
+    cons->tail = tail;
     ExObject result{};
     result.type = EX_CONS_TYPE;
-    result.as.pointer = &cons;
+    result.as.pointer = cons;
     return result;
 }
 
