@@ -132,8 +132,8 @@ defmodule ElixirAOT.Transformator do
     end
     ElixirAOT.Processing.add_predefine(clause_name <> "()")
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, true, state})
-    :ets.insert(:ex_aot_functions_list, {def_table})
-    :ets.insert(String.to_atom(def_original_name), {def_table})
+    append_ets_table(:ex_aot_functions_list, {def_table})
+    append_ets_table(String.to_atom(def_original_name), {def_table})
     IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
     IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
     ""

@@ -15,7 +15,10 @@ defmodule ElixirAOT.Modules do
     create_clauses(functions_list) <> "\n" <> create_managers(functions_list)
   end
 
-  def create_managers(functions), do: create_managers(functions, "")
+  def create_managers(functions) do
+    IO.inspect(Tuple.to_list(hd(functions)), label: "FUNCTIONS_CMANAGERS_PREVIEW")
+     create_managers(Tuple.to_list(hd(functions)), "")
+  end
   def create_managers([], acc), do: acc
 
   def create_managers([function | tail], acc) do
@@ -41,10 +44,11 @@ defmodule ElixirAOT.Modules do
     end
   end
 
-  def create_matching(clauses), do: create_matching(Enum.reverse(clauses), "")
+  def create_matching(clauses), do: create_matching(Tuple.to_list(hd(adapt_tuple_ets_table(clauses))), "")
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
+    IO.inspect([clause | tail], label: "CLAUSE_TAIL PREVIEW")
     [{clause, _, args, _, guard, state}] = :ets.lookup(clause, atom_to_raw_string(clause))
 
     create_matching(
@@ -62,7 +66,9 @@ defmodule ElixirAOT.Modules do
     )
   end
 
-  def create_clauses(functions), do: create_clauses(functions, "")
+  def create_clauses(functions) do
+    create_clauses(Tuple.to_list(hd(functions)), "")
+  end
   def create_clauses([], acc), do: acc
 
   def create_clauses([function | tail], acc) do
@@ -70,12 +76,23 @@ defmodule ElixirAOT.Modules do
     create_clauses(tail, acc <> clause_code <> "\n")
   end
 
-  def flat_single_ets([{function} | tail], acc) do
+  def flat_single_ets([function | tail], acc) do
     flat_single_ets(tail, [function | acc])
   end
 
-  def flat_single_ets([], acc), do: acc
+  def flat_single_ets([], acc), do: Enum.reverse(acc)
   def flat_single_ets(table), do: flat_single_ets(:ets.tab2list(table), [])
+
+  def adapt_tuple_ets_table(tuple), do: adapt_tuple_ets_table(adapt_tuple_to_list(tuple), [])
+  def adapt_tuple_ets_table([element | tail], acc) do
+    adapt_tuple_ets_table(tail, [element | tail])
+  end
+  def adapt_tuple_ets_table([], acc), do: acc
+
+  def adapt_tuple_to_list([]), do: []
+  def adapt_tuple_to_list({}), do: []
+  def adapt_tuple_to_list(x) when is_list(x), do: x
+  def adapt_tuple_to_list(x), do: Tuple.to_list(x)
 
   def reconstruct_clause_name(name), do: hd(String.split(name, "_Clause")) <> "_Clause"
 
