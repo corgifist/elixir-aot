@@ -16,7 +16,6 @@ defmodule ElixirAOT.Modules do
   end
 
   def create_managers(functions) do
-    IO.inspect(Tuple.to_list(hd(functions)), label: "FUNCTIONS_CMANAGERS_PREVIEW")
      create_managers(Tuple.to_list(hd(functions)), "")
   end
   def create_managers([], acc), do: acc
@@ -48,7 +47,6 @@ defmodule ElixirAOT.Modules do
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
-    IO.inspect([clause | tail], label: "CLAUSE_TAIL PREVIEW")
     [{clause, _, args, _, guard, state}] = :ets.lookup(clause, atom_to_raw_string(clause))
 
     create_matching(
@@ -85,7 +83,7 @@ defmodule ElixirAOT.Modules do
 
   def adapt_tuple_ets_table(tuple), do: adapt_tuple_ets_table(adapt_tuple_to_list(tuple), [])
   def adapt_tuple_ets_table([element | tail], acc) do
-    adapt_tuple_ets_table(tail, [element | tail])
+    adapt_tuple_ets_table(tail, [element | acc])
   end
   def adapt_tuple_ets_table([], acc), do: acc
 

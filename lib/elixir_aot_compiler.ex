@@ -4,12 +4,13 @@ defmodule ElixirAOT.Compiler do
     executable_name = hd(String.split(filename, "."))
 
     case System.cmd("g++", [
-           "-o",
-           executable_name,
-           "aotlib/aotlib.cpp",
-           "aotlib/aotmathlib.cpp",
-           filename
-         ]) do
+          "-o",
+          executable_name,
+          "aotlib/aotlib.cpp",
+          "aotlib/aotmathlib.cpp",
+          "aotlib/aotlibkernel.cpp",
+          filename
+        ]) do
       {output, _} -> IO.puts(output)
       _ -> IO.puts("Something unexpected occurred!")
     end

@@ -35,9 +35,9 @@ defmodule ElixirAOT.Transformator do
     base_code =
       "int main() {\n" <>
         "EX_ENVIRONMENT.push();\n" <>
-        create_ast(ast) <>
-        ";" <>
-        "\n" <>
+        create_ast(ast, {:module, :'Kernel_', 
+          ElixirAOT.Traverser.safe_traverse_module(ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex")))}) <>
+        ";\n" <>
         "return 0;\n" <>
         "}"
 
@@ -67,12 +67,12 @@ defmodule ElixirAOT.Transformator do
     ElixirAOT.Modules.create_table(atom_alias)
     # module functions list
     ElixirAOT.Modules.create_table(:ex_aot_functions_list)
-    create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body)})
+    ast_result = create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body)})
     module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
     ElixirAOT.Processing.add_module(module_code)
     ElixirAOT.Modules.terminate_module_tables()
     # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
-    ""
+    ast_result
   end
 
   # FUNCTIONS WITH GUARDS
@@ -105,8 +105,8 @@ defmodule ElixirAOT.Transformator do
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, guard, state})
     append_ets_table(:ex_aot_functions_list, {def_table})
     append_ets_table(String.to_atom(def_original_name), {def_table})
-    IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
-    IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
     ""
   end
 
@@ -140,8 +140,8 @@ defmodule ElixirAOT.Transformator do
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, true, state})
     append_ets_table(:ex_aot_functions_list, {def_table})
     append_ets_table(String.to_atom(def_original_name), {def_table})
-    IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
-    IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
+    # IO.inspect(:ets.tab2list(def_table), label: "DEF_TABLE")
+    # IO.inspect(:ets.tab2list(:ex_aot_functions_list), label: "EX_AOT_FUNCTIONS_LIST")
     ""
   end
 
@@ -161,6 +161,8 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:-)
   Transformator.Macros.binary_op(:*)
   Transformator.Macros.binary_op(:/)
+
+  Transformator.Macros.binary_op(:<>)
 
   Transformator.Macros.binary_op(:==)
   Transformator.Macros.binary_op(:!=)

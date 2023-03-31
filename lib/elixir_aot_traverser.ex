@@ -5,11 +5,19 @@ defmodule ElixirAOT.Traverser do
     adapt_list(traverse_result)
   end
 
+  def traverse_module({:defmodule, _, [_, [do: body]]}) do
+    traverse_module(body)
+  end
+
   def traverse_module({:__block__, _, block}) do
     traverse_block(block)
   end
 
-  def traverse_module({:def, _, [{fn_name, _, _}, _]}) do
+  def traverse_module({:def, _, [{:when, _, [{fn_name, _, _}, _]}, [do: _]]}) do
+    fn_name
+  end
+
+  def traverse_module({:def, _, [{fn_name, _, _}, [do: _]]}) do
     fn_name
   end
 
