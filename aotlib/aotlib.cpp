@@ -78,7 +78,6 @@ void ExEnvironment::push() {
 }
 
 void ExEnvironment::pop() {
-    delete scope.top();
     scope.pop();
 }
 
@@ -110,7 +109,6 @@ std::string ExObject_ToString(ExObject object) {
             }
             ExObject exList = EX_LIST(futurePreview);
             std::string result = ExObject_ToString(exList);
-            FREE_EX_PTR(exList, std::vector<ExObject>);
             return result;
         }
         case EX_NIL_TYPE: {
@@ -175,10 +173,11 @@ bool ExObject_equals(ExObject a, ExObject b) {
 }
 
 ExObject EX_LIST(std::vector<ExObject> list) {
-    ExObject result = *(new ExObject());
-    result.type = EX_LIST_TYPE;
-    result.as.pointer = (void*) new std::vector<ExObject>(list);
-    return result;
+    std::vector<ExObject>* gcList = new std::vector<ExObject>(list);
+    ExObject* result = EX_MALLOC(ExObject);
+    result->type = EX_LIST_TYPE;
+    result->as.pointer = gcList;
+    return *result;
 }
 
 ExObject EX_TUPLE(std::vector<ExObject> tuple) {
@@ -188,7 +187,12 @@ ExObject EX_TUPLE(std::vector<ExObject> tuple) {
 }
 
 ExObject EX_ATOM(std::string atom) {
-    if (ATOMS.find(atom) != ATOMS.end()) return ((ExObject){EX_ATOM_TYPE, {.atom=ATOMS[atom]}});
+    if (ATOMS.find(atom) != ATOMS.end()) {
+        ExObject* result = EX_MALLOC(ExObject);
+        result->type = EX_ATOM_TYPE;
+        result->as.atom = ATOMS[atom];
+        return *result;
+    }
     ATOMS[atom] = ATOMS_COUNT;
     REVERSED_ATOMS[ATOMS_COUNT] = atom;
     ATOMS_COUNT++;
@@ -202,16 +206,17 @@ ExObject EX_VAR(std::string atom) {
 }
 
 ExObject EX_CONS(ExObject head, ExObject tail) {
-    ExCons* cons = new ExCons();
+    ExCons* cons = EX_MALLOC(ExCons);
     cons->head = head;
     cons->tail = tail;
-    ExObject result = *(new ExObject());
-    result.type = EX_CONS_TYPE;
-    result.as.pointer = cons;
-    return result;
+    ExObject* result = EX_MALLOC(ExObject);
+    result->type = EX_CONS_TYPE;
+    result->as.pointer = cons;
+    return *result;
 }
 
 ExObject EX_STRING(std::string str) {
-    std::string* mstr = new std::string(str);
+    std::string* mstr = EX_MALLOC(std::string);
+    *mstr = str;
     return ((ExObject){EX_STRING_TYPE, {.str=mstr}});
 }

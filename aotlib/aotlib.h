@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstdarg>
 #include <tuple>
+#include <gc.h>
 
 typedef enum {
     EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_VAR_TYPE, EX_STRING_TYPE, 
@@ -79,8 +80,6 @@ std::string ExObject_ListToString(ExObject list);
 #define AS_CONS(value) (*((ExCons*) (value).as.pointer))
 #define AS_STRING(value) *(value.as.str)
 
-#define FREE_EX_PTR(value, type) delete (type*) value.as.pointer;
-
 #define BOOL_AS_ATOM(value) ((value) ? EX_ATOM("true") : EX_ATOM("false"))
 
 #define LIST_AT(list, index) ((AS_LIST(list)).at(index))
@@ -88,6 +87,8 @@ std::string ExObject_ListToString(ExObject list);
 #define IS_TRUE(atom) (ExObject_ToString(atom)) == ":true"
 
 #define EX_NOT_EXPR(expr) BOOL_AS_ATOM(!(IS_TRUE(expr)))
+
+#define EX_MALLOC(type) ((type*) GC_MALLOC(sizeof(type)))
 
 // because it is impossible to import aotlibexceptions.h
 #define MATCH_ERROR() throw EX_TUPLE({EX_ATOM("MatchError"), EX_TUPLE({EX_STRING("cannot match values"), left, right})});

@@ -34,6 +34,7 @@ defmodule ElixirAOT.Transformator do
 
     base_code =
       "int main() {\n" <>
+        "GC_INIT();\n" <>
         "EX_ENVIRONMENT.push();\n" <>
         "try {\n" <>
         create_ast(ast, {:module, :'Kernel_', 
