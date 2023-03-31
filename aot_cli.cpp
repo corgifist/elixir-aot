@@ -1,18 +1,75 @@
 #include "aotlib/aotgeneral.h"
 
 extern ExEnvironment EX_ENVIRONMENT;
+ExObject ExModule_Fibonacci_fib_Clause102712();
+ExObject ExModule_Fibonacci_fib_Clause661480();
+ExObject ExModule_Fibonacci_fib_Clause865575();
+ExObject ExRemote_Fibonacci_fib(ExObject argumnets);
+ExObject ExModule_Fibonacci_fib_Clause865575() {
+ExObject exReturn = EX_NIL();
+exReturn = EX_NUMBER(1);
+return exReturn;
+}
+
+ExObject ExModule_Fibonacci_fib_Clause661480() {
+ExObject exReturn = EX_NIL();
+exReturn = EX_NUMBER(1);
+return exReturn;
+}
+
+ExObject ExModule_Fibonacci_fib_Clause102712() {
+ExObject exReturn = EX_NIL();
+exReturn = ExMath_add(ExRemote_Fibonacci_fib(EX_LIST({ExMath_sub(EX_ENVIRONMENT.get("n"), EX_NUMBER(1))})), ExRemote_Fibonacci_fib(EX_LIST({ExMath_sub(EX_ENVIRONMENT.get("n"), EX_NUMBER(2))})));
+return exReturn;
+}
+
+
+ExObject ExRemote_Fibonacci_fib(ExObject arguments) {
+		EX_ENVIRONMENT.push();
+		if (ExMatch_tryMatch(EX_LIST({EX_NUMBER(0)}), arguments)) {
+			if (IS_TRUE(EX_ATOM("true"))) {
+				ExObject result = ExModule_Fibonacci_fib_Clause865575();
+				EX_ENVIRONMENT.pop();
+				return result;
+			};
+		}
+		EX_ENVIRONMENT.pop();
+		EX_ENVIRONMENT.push();
+		if (ExMatch_tryMatch(EX_LIST({EX_NUMBER(1)}), arguments)) {
+			if (IS_TRUE(EX_ATOM("true"))) {
+				ExObject result = ExModule_Fibonacci_fib_Clause661480();
+				EX_ENVIRONMENT.pop();
+				return result;
+			};
+		}
+		EX_ENVIRONMENT.pop();
+		EX_ENVIRONMENT.push();
+		if (ExMatch_tryMatch(EX_LIST({EX_VAR("n")}), arguments)) {
+			if (IS_TRUE(EX_ATOM("true"))) {
+				ExObject result = ExModule_Fibonacci_fib_Clause102712();
+				EX_ENVIRONMENT.pop();
+				return result;
+			};
+		}
+		EX_ENVIRONMENT.pop();
+ExException_FunctionClauseError(EX_TUPLE({EX_STRING("cannot find suitable clause for function"), EX_ATOM("Fibonacci_fib"), arguments}));
+return EX_NIL();
+}
+
+
+
 
 int main() {
 EX_ENVIRONMENT.push();
 try {
 {
-	ExMatch_pattern(EX_VAR("list"), EX_LIST({EX_NUMBER(1), EX_NUMBER(2), EX_NUMBER(3)}));
-	ExMatch_pattern(EX_VAR("fn_hd"), ExRemote_Kernel_hd(EX_LIST({EX_ENVIRONMENT.get("list")})));
-	ExMatch_pattern(EX_VAR("fn_tl"), ExRemote_Kernel_tl(EX_LIST({EX_ENVIRONMENT.get("list")})));
-	ExMatch_pattern(EX_CONS(EX_VAR("match_hd"), EX_VAR("match_tl")), EX_ENVIRONMENT.get("list"));
-	ExRemote_IO_puts(EX_LIST({ExMath_concatString(ExRemote_Kernel_to_string(EX_LIST({EX_ENVIRONMENT.get("fn_hd")})), ExMath_concatString(EX_STRING(" "), ExRemote_Kernel_to_string(EX_LIST({EX_ENVIRONMENT.get("fn_tl")}))))}));
-	ExRemote_Kernel_exit(EX_LIST({EX_ATOM("normal")}));
-	ExRemote_IO_puts(EX_LIST({ExMath_concatString(ExRemote_Kernel_to_string(EX_LIST({EX_ENVIRONMENT.get("match_hd")})), ExMath_concatString(EX_STRING(" "), ExRemote_Kernel_to_string(EX_LIST({EX_ENVIRONMENT.get("match_tl")}))))}));
+	{
+	;
+	;
+	;
+}
+;
+	ExRemote_IO_puts(EX_LIST({ExRemote_Fibonacci_fib(EX_LIST({EX_NUMBER(10)}))}));
 }
 ;
 } catch (ExObject object) {

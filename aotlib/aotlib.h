@@ -32,7 +32,7 @@ typedef struct {
 typedef std::unordered_map<std::string, ExObject> ExBinding;
 
 typedef struct {
-    std::stack<ExBinding> scope;
+    std::stack<ExBinding*> scope;
 
     ExObject get(std::string name);
     ExObject write(std::string name, ExObject object);
@@ -78,6 +78,8 @@ std::string ExObject_ListToString(ExObject list);
 #define AS_LIST(value) (*((std::vector<ExObject>*) (value).as.pointer))
 #define AS_CONS(value) (*((ExCons*) (value).as.pointer))
 #define AS_STRING(value) *(value.as.str)
+
+#define FREE_EX_PTR(value, type) delete (type*) value.as.pointer;
 
 #define BOOL_AS_ATOM(value) ((value) ? EX_ATOM("true") : EX_ATOM("false"))
 

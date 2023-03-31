@@ -21,7 +21,9 @@ ExObject ExMatch_pattern(ExObject left, ExObject right) {
             for (int i = 0; i < leftList.size(); i++) {
                 ExObject leftObject = leftList.at(i);
                 ExObject rightObject = rightList.at(i);
-                ExMatch_pattern(leftObject, rightObject);
+                if (!ExMatch_tryMatch(leftObject, rightObject)) {
+                    MATCH_ERROR();
+                }
             }
             break;
         }
@@ -39,6 +41,7 @@ ExObject ExMatch_pattern(ExObject left, ExObject right) {
         default: { // constant pattern
             if (!ExObject_equals(left, right)) 
                 MATCH_ERROR();
+            break;
         }
     }
     return right;
@@ -48,7 +51,7 @@ bool ExMatch_tryMatch(ExObject left, ExObject right) {
     try {
         ExMatch_pattern(left, right);
         return true;
-    } catch (std::runtime_error& ex) {
+    } catch (ExObject exceptions) {
         return false;
     }
 }
@@ -59,27 +62,23 @@ ExObject ExRemote_IO_puts(ExObject args) {
 }
 
 ExObject ExEnvironment::get(std::string name) {
-    if (scope.top().find(name) == scope.top().end()) {
+    if (scope.top()->find(name) == scope.top()->end()) {
         VARIABLE_ERROR(name);
     }
-    return scope.top()[name];
+    return scope.top()->at(name);
 }
 
 ExObject ExEnvironment::write(std::string name, ExObject object) {
-    scope.top()[name] = object;
+    scope.top()->insert(std::make_pair(name, object));
     return object;
 }
 
 void ExEnvironment::push() {
-    if (scope.empty()) {
-        scope.push(ExBinding{});
-        return;
-    }
-    ExBinding binding = scope.top();
-    scope.push(binding);
+    scope.push(new ExBinding());
 }
 
 void ExEnvironment::pop() {
+    delete scope.top();
     scope.pop();
 }
 
@@ -109,7 +108,10 @@ std::string ExObject_ToString(ExObject object) {
             for (auto& object : tailVector) {
                 futurePreview.push_back(object);
             }
-            return ExObject_ToString(EX_LIST(futurePreview));
+            ExObject exList = EX_LIST(futurePreview);
+            std::string result = ExObject_ToString(exList);
+            FREE_EX_PTR(exList, std::vector<ExObject>);
+            return result;
         }
         case EX_NIL_TYPE: {
             return "nil";
@@ -173,7 +175,7 @@ bool ExObject_equals(ExObject a, ExObject b) {
 }
 
 ExObject EX_LIST(std::vector<ExObject> list) {
-    ExObject result{};
+    ExObject result = *(new ExObject());
     result.type = EX_LIST_TYPE;
     result.as.pointer = (void*) new std::vector<ExObject>(list);
     return result;
@@ -203,7 +205,7 @@ ExObject EX_CONS(ExObject head, ExObject tail) {
     ExCons* cons = new ExCons();
     cons->head = head;
     cons->tail = tail;
-    ExObject result{};
+    ExObject result = *(new ExObject());
     result.type = EX_CONS_TYPE;
     result.as.pointer = cons;
     return result;

@@ -34,7 +34,8 @@ defmodule ElixirAOT.Modules do
           acc <>
             "ExObject ExRemote_#{original_name}(ExObject arguments) {\n" <>
             create_matching(function_clauses) <>
-            "ExException_FunctionClauseError(EX_TUPLE({EX_STRING(\"cannot find suitable clause for function\"), EX_ATOM(\"#{original_name}\")}));\n" <>
+            "ExException_FunctionClauseError(EX_TUPLE({EX_STRING(\"cannot find suitable clause for function\"), EX_ATOM(\"#{original_name}\"), arguments}));\n" <>
+            "return EX_NIL();\n" <>
             "}\n" <> "\n"
         )
 
@@ -52,7 +53,6 @@ defmodule ElixirAOT.Modules do
     create_matching(
       tail,
       acc <>
-        "\ttry {\n" <>
         "\t\tEX_ENVIRONMENT.push();\n" <>
         "\t\tif (ExMatch_tryMatch(#{ElixirAOT.Transformator.create_ast(args, :match)}, arguments)) {\n" <>
         "\t\t\tif (IS_TRUE(#{ElixirAOT.Transformator.create_ast(guard, state)})) {\n" <>
@@ -60,10 +60,8 @@ defmodule ElixirAOT.Modules do
         "\t\t\t\tEX_ENVIRONMENT.pop();\n" <>
         "\t\t\t\treturn result;\n" <>
         "\t\t\t};\n" <>
-        "\t\tEX_ENVIRONMENT.pop();\n" <>
-        "\t}\n\t} catch (ExObject exception) {\n" <>
-        "\t\t// skip for the next clause\n" <>
-        "\t}\n"
+        "\t\t}\n" <>
+        "\t\tEX_ENVIRONMENT.pop();\n" 
     )
   end
 
