@@ -35,9 +35,13 @@ defmodule ElixirAOT.Transformator do
     base_code =
       "int main() {\n" <>
         "EX_ENVIRONMENT.push();\n" <>
+        "try {\n" <>
         create_ast(ast, {:module, :'Kernel_', 
           ElixirAOT.Traverser.safe_traverse_module(ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex")))}) <>
         ";\n" <>
+        "} catch (ExObject object) {\n" <>
+        "throw std::runtime_error(ExObject_ToString(object));\n" <>
+        "}\n" <>
         "return 0;\n" <>
         "}"
 
@@ -55,6 +59,15 @@ defmodule ElixirAOT.Transformator do
   end
 
   def create_ast(ast), do: create_ast(ast, :normal)
+
+  def create_ast({:raise, _, [exception_alias, argument]}, state) do
+    exception = destruct_alias(exception_alias)
+    "ExException_#{String.slice(exception, 0..String.length(exception) - 2)}(#{create_ast(argument, state)})"
+  end
+
+  def create_ast({:raise, _, [argument]}, state) do
+    "ExException_throw(#{create_ast(argument, state)})"
+  end
 
   def create_ast({:{}, _, tuple}, state) do
     "EX_TUPLE(#{create_curly_list(tuple, state)})"

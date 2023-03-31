@@ -9,6 +9,7 @@ defmodule ElixirAOT.Compiler do
           "aotlib/aotlib.cpp",
           "aotlib/aotmathlib.cpp",
           "aotlib/aotlibkernel.cpp",
+          "aotlib/aotlibexceptions.cpp",
           filename
         ]) do
       {output, _} -> IO.puts(output)

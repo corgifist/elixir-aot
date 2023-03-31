@@ -60,7 +60,7 @@ ExObject ExRemote_IO_puts(ExObject args) {
 
 ExObject ExEnvironment::get(std::string name) {
     if (scope.top().find(name) == scope.top().end()) {
-        throw std::runtime_error("undefined variable/function " + name);
+        VARIABLE_ERROR(name);
     }
     return scope.top()[name];
 }

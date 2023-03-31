@@ -85,4 +85,6 @@ std::string ExObject_ListToString(ExObject list);
 
 #define IS_TRUE(atom) (ExObject_ToString(atom)) == ":true"
 
-#define MATCH_ERROR() throw std::runtime_error("cannot match values: " + ExObject_ToString(left) + " and " + ExObject_ToString(right))
+// because it is impossible to import aotlibexceptions.h
+#define MATCH_ERROR() throw EX_TUPLE({EX_ATOM("MatchError"), EX_TUPLE({EX_STRING("cannot match values"), left, right})});
+#define VARIABLE_ERROR(name) throw EX_TUPLE({EX_ATOM("RuntimeError"), EX_TUPLE({EX_STRING("unknown variable/function"), EX_STRING(name)})})

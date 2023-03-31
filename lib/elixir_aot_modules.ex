@@ -34,7 +34,7 @@ defmodule ElixirAOT.Modules do
           acc <>
             "ExObject ExRemote_#{original_name}(ExObject arguments) {\n" <>
             create_matching(function_clauses) <>
-            "throw std::runtime_error(\"cannot find suitable clause for function call!\");\n" <>
+            "ExException_FunctionClauseError(EX_TUPLE({EX_STRING(\"cannot find suitable clause for function\"), EX_ATOM(\"#{original_name}\")}));\n" <>
             "}\n" <> "\n"
         )
 
@@ -52,15 +52,18 @@ defmodule ElixirAOT.Modules do
     create_matching(
       tail,
       acc <>
-        "\tEX_ENVIRONMENT.push();\n" <>
-        "\tif (ExMatch_tryMatch(#{ElixirAOT.Transformator.create_ast(args, :match)}, arguments)) {\n" <>
-        "\t\tif (IS_TRUE(#{ElixirAOT.Transformator.create_ast(guard, state)})) {\n" <>
-        "\t\t\tExObject result = #{Kernel.to_string(clause)}();\n" <>
-        "\t\t\tEX_ENVIRONMENT.pop();\n" <>
-        "\t\t\treturn result;\n" <>
-        "\t\t};\n" <>
-        "\t}\n" <>
-        "\tEX_ENVIRONMENT.pop();\n"
+        "\ttry {\n" <>
+        "\t\tEX_ENVIRONMENT.push();\n" <>
+        "\t\tif (ExMatch_tryMatch(#{ElixirAOT.Transformator.create_ast(args, :match)}, arguments)) {\n" <>
+        "\t\t\tif (IS_TRUE(#{ElixirAOT.Transformator.create_ast(guard, state)})) {\n" <>
+        "\t\t\t\tExObject result = #{Kernel.to_string(clause)}();\n" <>
+        "\t\t\t\tEX_ENVIRONMENT.pop();\n" <>
+        "\t\t\t\treturn result;\n" <>
+        "\t\t\t};\n" <>
+        "\t\tEX_ENVIRONMENT.pop();\n" <>
+        "\t}\n\t} catch (ExObject exception) {\n" <>
+        "\t\t// skip for the next clause\n" <>
+        "\t}\n"
     )
   end
 
