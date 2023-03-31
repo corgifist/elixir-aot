@@ -1,1 +1,1 @@
-IO.puts(x)
+IO.puts(not true)

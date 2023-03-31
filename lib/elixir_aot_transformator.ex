@@ -60,6 +60,10 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast({:not, _, [expr]}, state) do
+    "EX_NOT_EXPR(#{create_ast(expr, state)})"
+  end
+
   def create_ast({:raise, _, [exception_alias, argument]}, state) do
     exception = destruct_alias(exception_alias)
     "ExException_#{String.slice(exception, 0..String.length(exception) - 2)}(#{create_ast(argument, state)})"
