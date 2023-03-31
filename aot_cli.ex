@@ -1,8 +1,12 @@
-defmodule Fibonacci do
-    def fib(0), do: 1
-    def fib(1), do: 1
-    def fib(n) do
-        fib(n - 1) + fib(n - 2)
+defmodule NestedTraversingTest do
+    def first() do
+        IO.puts("In " <> to_string(:internal))
+        second()
+    end
+
+    def second() do
+        IO.puts("In " <> hd([2]) <> to_string(:nd))
     end
 end
-IO.puts(Fibonacci.fib(10))
+
+NestedTraversingTest.first()

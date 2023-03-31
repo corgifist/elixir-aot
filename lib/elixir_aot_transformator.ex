@@ -38,7 +38,7 @@ defmodule ElixirAOT.Transformator do
         "EX_ENVIRONMENT.push();\n" <>
         "try {\n" <>
         create_ast(ast, {:module, :'Kernel_', 
-          ElixirAOT.Traverser.safe_traverse_module(ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex")))}) <>
+          ElixirAOT.Traverser.safe_traverse_module(ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex"))), nil}) <>
         ";\n" <>
         "} catch (ExObject object) {\n" <>
         "throw std::runtime_error(ExObject_ToString(object));\n" <>
@@ -82,14 +82,14 @@ defmodule ElixirAOT.Transformator do
     "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
   end
 
-  def create_ast({:defmodule, _, [name_alias, [do: body]]}, _) do
+  def create_ast({:defmodule, _, [name_alias, [do: body]]}, state = {:module, _, _, _}) do
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
     ElixirAOT.Modules.setup()
     ElixirAOT.Modules.create_table(atom_alias)
     # module functions list
     ElixirAOT.Modules.create_table(:ex_aot_functions_list)
-    ast_result = create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body)})
+    ast_result = create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body), state})
     module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
     ElixirAOT.Processing.add_module(module_code)
     ElixirAOT.Modules.terminate_module_tables()
@@ -98,7 +98,7 @@ defmodule ElixirAOT.Transformator do
   end
 
   # FUNCTIONS WITH GUARDS
-  def create_ast({:def, _, [{:when, _, [{fn_name, _, args}, guard]}, [do: body]]}, state = {:module, module_alias, _}) do
+  def create_ast({:def, _, [{:when, _, [{fn_name, _, args}, guard]}, [do: body]]}, state = {:module, module_alias, _, _}) do
     clause_name =
       "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
         Kernel.inspect(Enum.random(0..@clause_identifier_limit))
@@ -133,7 +133,7 @@ defmodule ElixirAOT.Transformator do
   end
 
   # FUNCTIONS WITHOUT GUARDS
-  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, state = {:module, module_alias, _}) do
+  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, state = {:module, module_alias, _, _}) do
     clause_name =
       "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
         Kernel.inspect(Enum.random(0..@clause_identifier_limit))
@@ -193,10 +193,10 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:<=)
   Transformator.Macros.binary_op(:>=)
 
-  def create_ast({fn_name, _, args}, state = {:module, module_alias, traverse_list}) when is_list(args) do
-    case fn_name in traverse_list do
-      true -> "ExRemote_#{Kernel.to_string(module_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
-      _ -> "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(fn_name)}\")"
+  def create_ast({fn_name, _, args}, state = {:module, _, _, _}) when is_list(args) do
+    case ElixirAOT.Traverser.traverse_state_list(state, fn_name) do
+      {:ok, traverse_alias, _} -> "ExRemote_#{Kernel.to_string(traverse_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
+      false -> "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(fn_name)}\")"
     end
   end
 

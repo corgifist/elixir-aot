@@ -5,6 +5,17 @@ defmodule ElixirAOT.Traverser do
     adapt_list(traverse_result)
   end
 
+  def traverse_state_list(nil, _) do
+    false
+  end
+
+  def traverse_state_list({:module, module_alias, traverse_list, next_traverse}, target) do
+    case target in traverse_list do
+      true -> {:ok, module_alias, target}
+      false -> traverse_state_list(next_traverse, target)
+    end
+  end
+
   def traverse_module({:defmodule, _, [_, [do: body]]}) do
     traverse_module(body)
   end
@@ -21,7 +32,7 @@ defmodule ElixirAOT.Traverser do
     fn_name
   end
 
-  def traverse_module(x), do: :skip_traversing
+  def traverse_module(_), do: :skip_traversing
 
   def traverse_block(block), do: traverse_block(block, [])
   def traverse_block([ast | tail], acc) do
