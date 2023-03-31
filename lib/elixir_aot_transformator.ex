@@ -56,6 +56,10 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast({:{}, _, tuple}, state) do
+    "EX_TUPLE(#{create_curly_list(tuple, state)})"
+  end
+
   def create_ast([{:|, _, [head, tail]}], state = :match) do
     "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
   end

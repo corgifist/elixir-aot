@@ -12,6 +12,7 @@ ExObject ExMatch_pattern(ExObject left, ExObject right) {
             EX_ENVIRONMENT.write(name, right);
             break;
         }
+        case EX_TUPLE_TYPE:
         case EX_LIST_TYPE: { // list pattern
             std::vector<ExObject> leftList = AS_LIST(left);
             std::vector<ExObject> rightList = AS_LIST(right);
@@ -93,6 +94,7 @@ std::string ExObject_ToString(ExObject object) {
         case EX_STRING_TYPE: {
             return AS_STRING(object);
         }
+        case EX_TUPLE_TYPE:
         case EX_LIST_TYPE: {
             return ExObject_ListToString(object);
         }
@@ -130,7 +132,7 @@ std::string ExObject_ListToString(ExObject list) {
         result += ExObject_ToString(object) + (index == vectorList.size() - 1 ? "" : ", ");
         index++;
     }
-    return "[" + result + "]";
+    return (list.type == EX_LIST_TYPE ? "[" : "{") + result + (list.type == EX_LIST_TYPE ? "]" : "}");
 }
 
 bool ExObject_equals(ExObject a, ExObject b) {
@@ -145,6 +147,7 @@ bool ExObject_equals(ExObject a, ExObject b) {
         case EX_STRING_TYPE: {
             return AS_STRING(a) == AS_STRING(b);
         }
+        case EX_TUPLE_TYPE:
         case EX_LIST_TYPE: {
             std::vector<ExObject> aList = AS_LIST(a);
             std::vector<ExObject> bList = AS_LIST(b);
@@ -173,6 +176,12 @@ ExObject EX_LIST(std::vector<ExObject> list) {
     ExObject result{};
     result.type = EX_LIST_TYPE;
     result.as.pointer = (void*) new std::vector<ExObject>(list);
+    return result;
+}
+
+ExObject EX_TUPLE(std::vector<ExObject> tuple) {
+    ExObject result = EX_LIST(tuple);
+    result.type = EX_TUPLE_TYPE;
     return result;
 }
 

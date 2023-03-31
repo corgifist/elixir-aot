@@ -1,1 +1,3 @@
-IO.puts("Sum: " <> to_string(2 + 2))
+coords = {1, 2, 3}
+{x, y, z} = coords
+IO.puts(x + y + z)

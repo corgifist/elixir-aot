@@ -11,7 +11,7 @@
 
 typedef enum {
     EX_NUMBER_TYPE, EX_ATOM_TYPE, EX_VAR_TYPE, EX_STRING_TYPE, 
-    EX_LIST_TYPE, EX_CONS_TYPE, EX_NIL_TYPE
+    EX_LIST_TYPE, EX_TUPLE_TYPE, EX_CONS_TYPE, EX_NIL_TYPE
 } ExValueType;
 
 typedef struct {
@@ -42,6 +42,7 @@ typedef struct {
 } ExEnvironment;
 
 ExObject EX_LIST(std::vector<ExObject> list);
+ExObject EX_TUPLE(std::vector<ExObject> tuple);
 
 ExObject EX_ATOM(std::string atom);
 
