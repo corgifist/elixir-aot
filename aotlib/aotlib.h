@@ -75,8 +75,8 @@ std::string ExObject_ListToString(ExObject list);
 #define EX_NIL() ((ExObject){EX_NIL_TYPE, {}})
 
 #define AS_NUMBER(value) ((value).as.number)
-#define AS_LIST(value) *((std::vector<ExObject>*) (value).as.pointer)
-#define AS_CONS(value) *((ExCons*) (value).as.pointer)
+#define AS_LIST(value) (*((std::vector<ExObject>*) (value).as.pointer))
+#define AS_CONS(value) (*((ExCons*) (value).as.pointer))
 #define AS_STRING(value) *(value.as.str)
 
 #define BOOL_AS_ATOM(value) ((value) ? EX_ATOM("true") : EX_ATOM("false"))
