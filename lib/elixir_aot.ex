@@ -9,7 +9,12 @@ defmodule ElixirAOT do
   def execute_file(filename) do
     source = File.read!(filename)
     ast = code_to_ast(source)
-    ElixirAOT.Compiler.compile_from_cpp(hd(String.split(filename, ".")) <> ".cpp", ElixirAOT.Transformator.transform(ast))
+
+    ElixirAOT.Compiler.compile_from_cpp(
+      hd(String.split(filename, ".")) <> ".cpp",
+      ElixirAOT.Transformator.transform(ast)
+    )
+
     IO.inspect(ast)
   end
 

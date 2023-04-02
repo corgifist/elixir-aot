@@ -15,9 +15,12 @@ defmodule ElixirAOT.Modules do
     create_clauses(functions_list) <> "\n" <> create_managers(functions_list)
   end
 
+  def create_managers([]), do: ""
+
   def create_managers(functions) do
-     create_managers(Tuple.to_list(hd(functions)), "")
+    create_managers(Tuple.to_list(hd(functions)), "")
   end
+
   def create_managers([], acc), do: acc
 
   def create_managers([function | tail], acc) do
@@ -44,7 +47,9 @@ defmodule ElixirAOT.Modules do
     end
   end
 
-  def create_matching(clauses), do: create_matching(Tuple.to_list(hd(adapt_tuple_ets_table(clauses))), "")
+  def create_matching(clauses),
+    do: create_matching(Tuple.to_list(hd(adapt_tuple_ets_table(clauses))), "")
+
   def create_matching([], acc), do: acc
 
   def create_matching([clause | tail], acc) do
@@ -61,13 +66,16 @@ defmodule ElixirAOT.Modules do
         "\t\t\t\treturn result;\n" <>
         "\t\t\t};\n" <>
         "\t\t}\n" <>
-        "\t\tEX_ENVIRONMENT.pop();\n" 
+        "\t\tEX_ENVIRONMENT.pop();\n"
     )
   end
+
+  def create_clauses([]), do: ""
 
   def create_clauses(functions) do
     create_clauses(Tuple.to_list(hd(functions)), "")
   end
+
   def create_clauses([], acc), do: acc
 
   def create_clauses([function | tail], acc) do
@@ -83,9 +91,11 @@ defmodule ElixirAOT.Modules do
   def flat_single_ets(table), do: flat_single_ets(:ets.tab2list(table), [])
 
   def adapt_tuple_ets_table(tuple), do: adapt_tuple_ets_table(adapt_tuple_to_list(tuple), [])
+
   def adapt_tuple_ets_table([element | tail], acc) do
     adapt_tuple_ets_table(tail, [element | acc])
   end
+
   def adapt_tuple_ets_table([], acc), do: acc
 
   def adapt_tuple_to_list([]), do: []

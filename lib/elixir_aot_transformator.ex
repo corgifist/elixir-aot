@@ -37,8 +37,13 @@ defmodule ElixirAOT.Transformator do
         "GC_INIT();\n" <>
         "EX_ENVIRONMENT.push();\n" <>
         "try {\n" <>
-        create_ast(ast, {:module, :'Kernel_', 
-          ElixirAOT.Traverser.safe_traverse_module(ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex"))), nil}) <>
+        create_ast(
+          ast,
+          {:module, :Kernel_,
+           ElixirAOT.Traverser.safe_traverse_module(
+             ElixirAOT.code_to_ast(File.read!("aotlib/ex/kernel.ex"))
+           ), nil}
+        ) <>
         ";\n" <>
         "} catch (ExObject object) {\n" <>
         "throw std::runtime_error(ExObject_ToString(object));\n" <>
@@ -61,13 +66,18 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast({:defmacro, _, [{_, _, _}, _]}, state) do
+    ""
+  end
+
   def create_ast({:not, _, [expr]}, state) do
     "EX_NOT_EXPR(#{create_ast(expr, state)})"
   end
 
   def create_ast({:raise, _, [exception_alias, argument]}, state) do
     exception = destruct_alias(exception_alias)
-    "ExException_#{String.slice(exception, 0..String.length(exception) - 2)}(#{create_ast(argument, state)})"
+
+    "ExException_#{String.slice(exception, 0..(String.length(exception) - 2))}(#{create_ast(argument, state)})"
   end
 
   def create_ast({:raise, _, [argument]}, state) do
@@ -82,23 +92,35 @@ defmodule ElixirAOT.Transformator do
     "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
   end
 
-  def create_ast({:defmodule, _, [name_alias, [do: body]]}, state = {:module, _, _, _}) do
+  def create_ast(module_ast = {:defmodule, _, [name_alias, [do: body]]}, state = {:module, _, _, _}) do
+    Code.eval_quoted(module_ast, [])
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
     ElixirAOT.Modules.setup()
     ElixirAOT.Modules.create_table(atom_alias)
     # module functions list
     ElixirAOT.Modules.create_table(:ex_aot_functions_list)
-    ast_result = create_ast(body, {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(body), state})
+
+    ast_result =
+      create_ast(
+        body,
+        {:module, atom_alias, ElixirAOT.Traverser.safe_traverse_module(module_ast), state}
+      )
+
     module_code = ElixirAOT.Modules.create_module_functions(atom_alias)
     ElixirAOT.Processing.add_module(module_code)
     ElixirAOT.Modules.terminate_module_tables()
+    atom_alias_as_string = atom_to_raw_string(atom_alias)
+    ElixirAOT.Processing.add_purge_target(String.to_atom(String.slice(atom_alias_as_string, 0..String.length(atom_alias_as_string) - 2)))
     # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
     ast_result
   end
 
   # FUNCTIONS WITH GUARDS
-  def create_ast({:def, _, [{:when, _, [{fn_name, _, args}, guard]}, [do: body]]}, state = {:module, module_alias, _, _}) do
+  def create_ast(
+        {:def, _, [{:when, _, [{fn_name, _, args}, guard]}, [do: body]]},
+        state = {:module, module_alias, _, _}
+      ) do
     clause_name =
       "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
         Kernel.inspect(Enum.random(0..@clause_identifier_limit))
@@ -123,6 +145,7 @@ defmodule ElixirAOT.Transformator do
       _ ->
         :ok
     end
+
     ElixirAOT.Processing.add_predefine(clause_name <> "()")
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, guard, state})
     append_ets_table(:ex_aot_functions_list, {def_table})
@@ -133,7 +156,10 @@ defmodule ElixirAOT.Transformator do
   end
 
   # FUNCTIONS WITHOUT GUARDS
-  def create_ast({:def, _, [{fn_name, _, args}, [do: body]]}, state = {:module, module_alias, _, _}) do
+  def create_ast(
+        {:def, _, [{fn_name, _, args}, [do: body]]},
+        state = {:module, module_alias, _, _}
+      ) do
     clause_name =
       "ExModule_#{atom_to_raw_string(module_alias)}#{atom_to_raw_string(fn_name)}_Clause" <>
         Kernel.inspect(Enum.random(0..@clause_identifier_limit))
@@ -158,6 +184,7 @@ defmodule ElixirAOT.Transformator do
       _ ->
         :ok
     end
+
     ElixirAOT.Processing.add_predefine(clause_name <> "()")
     :ets.insert(def_table, {clause_name, clause_body, args, def_original_name, true, state})
     append_ets_table(:ex_aot_functions_list, {def_table})
@@ -167,8 +194,20 @@ defmodule ElixirAOT.Transformator do
     ""
   end
 
-  def create_ast({{:., _, remote_alias}, _, args}, state) do
-    create_remote(remote_alias) <> "(#{create_ast(args, state)})"
+  def create_ast(ast = {{:., _, remote_alias}, _, args}, state) do
+    case ElixirAOT.Processing.ensure_guard(String.to_atom(create_universal_remote(remote_alias))) do
+      true ->
+        create_ast(Code.eval_quoted({
+          :__block__, [], [
+            {:require, [], [hd(remote_alias)]},
+            quote do
+              Macro.expand(var!(transfer_ast), __ENV__)
+            end
+          ]
+        }, [transfer_ast: ast], __ENV__))
+      false -> create_remote(remote_alias) <> "(#{create_ast(args, state)})"
+    end
+    
   end
 
   def create_ast({:__block__, _, block}, state) do
@@ -195,8 +234,11 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast({fn_name, _, args}, state = {:module, _, _, _}) when is_list(args) do
     case ElixirAOT.Traverser.traverse_state_list(state, fn_name) do
-      {:ok, traverse_alias, _} -> "ExRemote_#{Kernel.to_string(traverse_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
-      false -> "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(fn_name)}\")"
+      {:ok, traverse_alias, _} ->
+        "ExRemote_#{Kernel.to_string(traverse_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
+
+      false ->
+        "EX_ENVIRONMENT.get(\"#{atom_to_raw_string(fn_name)}\")"
     end
   end
 
@@ -242,6 +284,10 @@ defmodule ElixirAOT.Transformator do
   end
 
   def create_parent_args([], acc, _), do: "(" <> acc <> ")"
+
+  def create_universal_remote([{:__aliases__, _, module}, target]) do
+    create_module(module) <> atom_to_raw_string(target)
+  end
 
   def create_remote([{:__aliases__, _, module}, target]) do
     "ExRemote_" <> create_module(module) <> atom_to_raw_string(target)
@@ -293,8 +339,6 @@ defmodule ElixirAOT.Transformator do
   def adapt_empty_tuple(x), do: Tuple.to_list(x)
 
   def concat_tuples(a, b) do
-    List.to_tuple(
-      adapt_empty_tuple(a) ++ adapt_empty_tuple(b)
-    )
+    List.to_tuple(adapt_empty_tuple(a) ++ adapt_empty_tuple(b))
   end
 end

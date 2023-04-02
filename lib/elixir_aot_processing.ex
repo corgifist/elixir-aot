@@ -12,12 +12,28 @@ defmodule ElixirAOT.Processing do
     create_table(:ex_aot_includes)
     create_table(:ex_aot_modules)
     create_table(:ex_aot_predefines)
+    create_table(:ex_aot_purge_targets)
+    create_table(:ex_aot_guards)
     add_include("\"aotlib/aotgeneral.h\"")
   end
 
   def add_include(path), do: :ets.insert(:ex_aot_includes, {path})
   def add_predefine(name), do: :ets.insert(:ex_aot_predefines, {name})
   def add_module(module), do: :ets.insert(:ex_aot_modules, {module})
+  def add_guard(guard), do: :ets.insert(:ex_aot_guards, {guard})
+
+  def add_purge_target(module), do: :ets.insert(:ex_aot_purge_targets, {module})
+
+  def ensure_guard(guard) do
+    {guard} in :ets.tab2list(:ex_aot_guards)
+  end
+
+  def purge_targets(), do: purge_targets(:ets.tab2list(:ex_aot_purge_targets))
+  def purge_targets([]), do: :ok
+  def purge_targets([{target} | tail]) do
+    :code.purge(target)
+    purge_targets(tail)
+  end
 
   def get_modules() do
     get_modules(:ets.tab2list(:ex_aot_modules), "")
@@ -55,6 +71,7 @@ defmodule ElixirAOT.Processing do
   end
 
   def terminate() do
+    purge_targets()
     terminate_ets_registry()
   end
 
