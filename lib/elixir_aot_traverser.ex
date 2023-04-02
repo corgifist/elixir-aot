@@ -7,7 +7,11 @@ defmodule ElixirAOT.Traverser do
     false
   end
 
-  def traverse_module_specific_state_list(module_tuple = {:module, module_alias, _, next_traverse}, module_target, target) do
+  def traverse_module_specific_state_list(
+        module_tuple = {:module, module_alias, _, next_traverse},
+        module_target,
+        target
+      ) do
     case module_alias == module_target do
       true -> traverse_state_list(module_tuple, target)
       false -> traverse_module_specific_state_list(next_traverse, module_target, target)
@@ -36,7 +40,10 @@ defmodule ElixirAOT.Traverser do
   end
 
   def traverse_module({:defmacro, _, [{macro_name, _, _}, _]}, module_name) do
-    ElixirAOT.Processing.add_guard(String.to_atom(to_string(module_name) <> to_string(macro_name)))
+    ElixirAOT.Processing.add_guard(
+      String.to_atom(to_string(module_name) <> to_string(macro_name))
+    )
+
     {:macro, macro_name}
   end
 

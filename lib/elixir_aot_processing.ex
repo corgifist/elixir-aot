@@ -30,6 +30,7 @@ defmodule ElixirAOT.Processing do
 
   def purge_targets(), do: purge_targets(:ets.tab2list(:ex_aot_purge_targets))
   def purge_targets([]), do: :ok
+
   def purge_targets([{target} | tail]) do
     :code.purge(target)
     purge_targets(tail)

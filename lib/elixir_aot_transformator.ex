@@ -66,7 +66,16 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
-  def create_ast({:defmacro, _, [{_, _, _}, _]}, state) do
+  def create_ast({:quote, _, [[do: body]]}, state) do
+    create_ast(body, state)
+  end
+
+  def create_ast({:require, _, _}, _) do
+    # useless for aot compilation
+    ""
+  end
+
+  def create_ast({:defmacro, _, [{_, _, _}, _]}, _) do
     ""
   end
 
@@ -92,7 +101,12 @@ defmodule ElixirAOT.Transformator do
     "EX_CONS(#{create_ast(head, state)}, #{create_ast(tail, state)})"
   end
 
-  def create_ast(module_ast = {:defmodule, _, [name_alias, [do: body]]}, state = {:module, _, _, _}) do
+  def create_ast(
+        module_ast = {:defmodule, _, [name_alias, [do: body]]},
+        state = {:module, _, _, _}
+      ) do
+    module_ast = ElixirAOT.Guards.quote_ast(module_ast)
+    IO.inspect(module_ast, label: "MODULE_AST")
     Code.eval_quoted(module_ast, [])
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
@@ -111,7 +125,13 @@ defmodule ElixirAOT.Transformator do
     ElixirAOT.Processing.add_module(module_code)
     ElixirAOT.Modules.terminate_module_tables()
     atom_alias_as_string = atom_to_raw_string(atom_alias)
-    ElixirAOT.Processing.add_purge_target(String.to_atom(String.slice(atom_alias_as_string, 0..String.length(atom_alias_as_string) - 2)))
+
+    ElixirAOT.Processing.add_purge_target(
+      String.to_atom(
+        String.slice(atom_alias_as_string, 0..(String.length(atom_alias_as_string) - 2))
+      )
+    )
+
     # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
     ast_result
   end
@@ -197,17 +217,26 @@ defmodule ElixirAOT.Transformator do
   def create_ast(ast = {{:., _, remote_alias}, _, args}, state) do
     case ElixirAOT.Processing.ensure_guard(String.to_atom(create_universal_remote(remote_alias))) do
       true ->
-        create_ast(Code.eval_quoted({
-          :__block__, [], [
-            {:require, [], [hd(remote_alias)]},
-            quote do
-              Macro.expand(var!(transfer_ast), __ENV__)
-            end
-          ]
-        }, [transfer_ast: ast], __ENV__))
-      false -> create_remote(remote_alias) <> "(#{create_ast(args, state)})"
+        create_ast(
+          Code.eval_quoted(
+            {
+              :__block__,
+              [],
+              [
+                {:require, [], [hd(remote_alias)]},
+                quote do
+                  Macro.expand(var!(transfer_ast), __ENV__)
+                end
+              ]
+            },
+            [transfer_ast: ast],
+            __ENV__
+          )
+        )
+
+      false ->
+        create_remote(remote_alias) <> "(#{create_ast(args, state)})"
     end
-    
   end
 
   def create_ast({:__block__, _, block}, state) do

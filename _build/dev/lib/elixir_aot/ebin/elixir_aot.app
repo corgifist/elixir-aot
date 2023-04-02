@@ -3,7 +3,7 @@
               {description,"elixir_aot"},
               {modules,['Elixir.ElixirAOT','Elixir.ElixirAOT.CLI',
                         'Elixir.ElixirAOT.CLI.State',
-                        'Elixir.ElixirAOT.Compiler',
+                        'Elixir.ElixirAOT.Compiler','Elixir.ElixirAOT.Guards',
                         'Elixir.ElixirAOT.Modules',
                         'Elixir.ElixirAOT.Processing',
                         'Elixir.ElixirAOT.Transformator',

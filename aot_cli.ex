@@ -1,9 +1,13 @@
 defmodule Test do
-    defmacro macro() do
+    defmacro inspect_macro() do
         quote do
-            IO.puts("Hello, World!")
+            IO.puts("Hello!") 
         end
     end
-end
 
-Test.macro()
+    def main() do
+        IO.puts("Before macro")
+        Test.inspect_macro()
+    end
+end
+Test.main()
