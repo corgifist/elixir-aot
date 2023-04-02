@@ -66,9 +66,20 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
-  def create_ast({:quote, _, [[do: body]]}, state) do
-    create_ast(body, state)
+  def create_ast(quote_form = {:quote, _, [[do: body]]}, state) do
+    quoted_result = Code.eval_quoted(quote_form, [])
+    create_ast(quoted_result, :quote_form)
   end
+
+  def create_ast(tuple, state = :quote_form) when is_tuple(tuple) do
+    "EX_TUPLE(#{create_curly_list(Tuple.to_list(tuple), state)})"
+  end
+
+  def create_ast(x, :quoted_form) when is_nil(x), do: "EX_NIL()"
+  def create_ast(x, :quoted_form) when is_atom(x), do: "EX_ATOM(\"#{x}\")"
+  def create_ast(x, :quoted_form) when is_number(x), do: "EX_NUMBER(#{x})"
+  def create_ast(x, :quoted_form) when is_binary(x), do: "EX_STRING(\"#{x}\")"
+  def create_ast(x, state = :quoted_form) when is_list(x), do: "EX_LIST(#{create_curly_list(x, state)})"
 
   def create_ast({:require, _, _}, _) do
     # useless for aot compilation
