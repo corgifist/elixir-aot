@@ -54,12 +54,12 @@ ExObject EX_STRING(std::string str);
 ExObject EX_CONS(ExObject head, ExObject tail);
 ExObject CONS_AS_LIST(ExObject cons);
 
-ExObject ExRemote_IO_puts(ExObject expr);
-
 ExObject ExMatch_pattern(ExObject left, ExObject right);
 bool ExMatch_tryMatch(ExObject left, ExObject right);
 
 ExObject ExClause_tupleToList(std::tuple<ExObject> tuple);
+
+std::string TypeToString(ExObject object);
 
 static std::string DoubleToString(double value) {
     std::ostringstream strs;

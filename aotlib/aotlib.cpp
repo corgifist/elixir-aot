@@ -56,11 +56,6 @@ bool ExMatch_tryMatch(ExObject left, ExObject right) {
     }
 }
 
-ExObject ExRemote_IO_puts(ExObject args) {
-    std::cout << ExObject_ToString(LIST_AT(args, 0)) << std::endl;
-    return EX_ATOM("ok");
-}
-
 ExObject ExEnvironment::get(std::string name) {
     if (scope.top()->find(name) == scope.top()->end()) {
         VARIABLE_ERROR(name);
@@ -133,6 +128,38 @@ std::string ExObject_ListToString(ExObject list) {
         index++;
     }
     return (list.type == EX_LIST_TYPE ? "[" : "{") + result + (list.type == EX_LIST_TYPE ? "]" : "}");
+}
+
+std::string TypeToString(ExObject object) {
+    switch (object.type) {
+        case EX_NIL_TYPE: {
+            return "EX_NIL_TYPE";
+        }
+        case EX_VAR_TYPE: {
+            return "EX_VAR_TYPE";
+        }
+        case EX_ATOM_TYPE: {
+            return "EX_ATOM_TYPE";
+        }
+        case EX_CONS_TYPE: {
+            return "EX_CONS_TYPE";
+        }
+        case EX_LIST_TYPE: {
+            return "EX_LIST_TYPE";
+        }
+        case EX_TUPLE_TYPE: {
+            return "EX_TUPLE_TYPE";
+        }
+        case EX_NUMBER_TYPE: {
+            return "EX_NUMBER_TYPE";
+        }
+        case EX_STRING_TYPE: {
+            return "EX_STRING_TYPE";
+        }
+        default: {
+            return "EX_UNKNOWN_TYPE";
+        }
+    }
 }
 
 bool ExObject_equals(ExObject a, ExObject b) {

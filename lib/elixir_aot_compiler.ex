@@ -12,6 +12,7 @@ defmodule ElixirAOT.Compiler do
            "aotlib/aotmathlib.cpp",
            "aotlib/aotlibkernel.cpp",
            "aotlib/aotlibexceptions.cpp",
+           "aotlib/aotlibio.cpp",
            "-lgc",
            filename
          ]) do

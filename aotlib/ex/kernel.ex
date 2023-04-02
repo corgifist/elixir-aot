@@ -3,4 +3,5 @@ defmodule Kernel do
     def hd() do end
     def tl() do end
     def exit() do end
+    def inspect() do end
 end

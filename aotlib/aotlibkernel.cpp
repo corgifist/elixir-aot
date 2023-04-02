@@ -25,3 +25,27 @@ EX_REMOTE_MACRO(Kernel, tl) {
 EX_REMOTE_MACRO(Kernel, exit) {
     exit(LIST_AT(args, 0).as.atom);
 }
+
+EX_REMOTE_MACRO(Kernel, inspect) {
+    ExObject argument = LIST_AT(args, 0);
+    std::cout << TypeToString(argument) << std::endl;
+    switch (argument.type) {
+        case EX_STRING_TYPE: {
+            return EX_STRING("\"" + ExObject_ToString(argument) + "\"");
+        }
+        case EX_TUPLE_TYPE:
+        case EX_LIST_TYPE: {
+            std::string acc = "";
+            std::vector<ExObject> vector = AS_LIST(argument);
+            int index = 0;
+            for (ExObject object : vector) {
+                acc += AS_STRING(ExRemote_Kernel_inspect(object)) + (index == vector.size() - 1 ? "" : ", ");
+                index++;
+            }
+            return EX_STRING("[" + acc + "]");
+        }
+        default: {
+            return EX_STRING(ExObject_ToString(argument));
+        }
+    }
+}
