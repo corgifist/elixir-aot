@@ -117,7 +117,6 @@ defmodule ElixirAOT.Transformator do
         state = {:module, _, _, _}
       ) do
     module_ast = ElixirAOT.Guards.quote_ast(module_ast)
-    IO.inspect(module_ast, label: "MODULE_AST")
     Code.eval_quoted(module_ast, [])
     atom_alias = String.to_atom(destruct_alias(name_alias))
     # clause management table
@@ -228,21 +227,22 @@ defmodule ElixirAOT.Transformator do
   def create_ast(ast = {{:., _, remote_alias}, _, args}, state) do
     case ElixirAOT.Processing.ensure_guard(String.to_atom(create_universal_remote(remote_alias))) do
       true ->
+        {macro_result, _} = Code.eval_quoted(
+          {
+            :__block__,
+            [],
+            [
+              {:require, [], [hd(remote_alias)]},
+              quote do
+                Macro.expand(var!(transfer_ast), __ENV__)
+              end
+            ]
+          },
+          [transfer_ast: ast],
+          __ENV__
+        )
         create_ast(
-          Code.eval_quoted(
-            {
-              :__block__,
-              [],
-              [
-                {:require, [], [hd(remote_alias)]},
-                quote do
-                  Macro.expand(var!(transfer_ast), __ENV__)
-                end
-              ]
-            },
-            [transfer_ast: ast],
-            __ENV__
-          )
+          macro_result, state
         )
 
       false ->
@@ -272,9 +272,17 @@ defmodule ElixirAOT.Transformator do
   Transformator.Macros.binary_op(:<=)
   Transformator.Macros.binary_op(:>=)
 
-  def create_ast({fn_name, _, args}, state = {:module, _, _, _}) when is_list(args) do
+  def create_ast(ast = {fn_name, _, args}, state = {:module, _, _, _}) when is_list(args) do
+    case ElixirAOT.Traverser.traverse_state_list(state, {:macro, fn_name}) do
+      {:ok, traverse_alias, _} -> 
+        create_ast({{:., [], [generate_remote_alias(traverse_alias), fn_name]}, [], args}, state)
+      false -> construct_headless_call_ast(ast, state)
+    end
+  end
+
+  def construct_headless_call_ast(ast = {fn_name, _, args}, state = {:module, _, _, _}) do
     case ElixirAOT.Traverser.traverse_state_list(state, fn_name) do
-      {:ok, traverse_alias, _} ->
+      {:ok, traverse_alias, atom} ->
         "ExRemote_#{Kernel.to_string(traverse_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
 
       false ->
@@ -302,6 +310,10 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(x, _) do
     Kernel.inspect(x)
+  end
+
+  def generate_remote_alias(name) do
+    {:__aliases__, [alias: false], Enum.map(Enum.drop(String.split(to_string(name), "_"), -1), fn x -> String.to_atom(x) end)}
   end
 
   def create_curly_list([object], state, acc),

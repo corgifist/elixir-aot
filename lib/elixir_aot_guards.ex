@@ -8,9 +8,8 @@ defmodule ElixirAOT.Guards do
   end
 
   def quote_ast(
-        x =
-          {:defmacro, context,
-           [{macro_name, macro_context, macro_args}, [do: {:quote, [], [[do: macro_body]]}]]}
+    x = {:defmacro, context,
+        [{macro_name, macro_context, macro_args}, [do: {:quote, quote_context, [[do: macro_body]]}]]}
       ) do
     # quoted macro definition
     x
