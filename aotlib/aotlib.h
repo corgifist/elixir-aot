@@ -39,6 +39,7 @@ typedef struct {
     ExObject write(std::string name, ExObject object);
 
     void push();
+    void pushCopy();
     void pop();
 } ExEnvironment;
 

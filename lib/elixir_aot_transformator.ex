@@ -67,6 +67,14 @@ defmodule ElixirAOT.Transformator do
 
   def create_ast(ast), do: create_ast(ast, :normal)
 
+  def create_ast(if_ast = {:if, _, _}, state) do
+    expanded_ast = Macro.expand(if_ast, __ENV__)
+    IO.inspect(expanded_ast)
+    create_ast(
+      expanded_ast, state
+    )
+  end
+
   def create_ast({:case, _, [match_value, [do: clauses]]}, state) do
     case_identifier = "ExCase" <> to_string(Enum.random(0..@clause_identifier_limit))
     ElixirAOT.Processing.add_predefine("#{case_identifier}(ExObject argument)")
@@ -76,19 +84,19 @@ defmodule ElixirAOT.Transformator do
     "#{case_identifier}(#{create_ast(match_value, state)})"
   end
 
-  def create_ast({:->, _, [[{:when, _, [pattern, guard]}], body]}, {:case, case_identifier, original_state}) do
+  def create_ast({:->, _, [[{:when, _, [pattern, guard]}], body]}, {:case, case_identifier, _}) do
     table_atom = String.to_atom(case_identifier)
     append_ets_table(table_atom, {{table_atom, [:clause, pattern, body, guard]}})
     ""
   end
 
-  def create_ast({:->, _, [[pattern], body]}, {:case, case_identifier, original_state}) do
+  def create_ast({:->, _, [[pattern], body]}, {:case, case_identifier, _}) do
     table_atom = String.to_atom(case_identifier)
     append_ets_table(table_atom, {{table_atom, [:clause, pattern, body, true]}})
     ""
   end
 
-  def create_ast(quote_form = {:quote, _, [[do: body]]}, state) do
+  def create_ast(quote_form = {:quote, _, [[do: _]]}, _) do
     quoted_result = Code.eval_quoted(quote_form, [])
     create_ast(quoted_result, :quote_form)
   end
@@ -167,6 +175,10 @@ defmodule ElixirAOT.Transformator do
 
     # IO.inspect(:ets.tab2list(:ex_aot_modules), label: "EX_AOT_MODULES")
     ast_result
+  end
+
+  def create_ast(x = {:defp, _, _}, state) do
+    create_ast(Tuple.insert_at(Tuple.delete_at(x, 0), 0, :def), state)
   end
 
   # FUNCTIONS WITH GUARDS
@@ -303,9 +315,9 @@ defmodule ElixirAOT.Transformator do
     end
   end
 
-  def construct_headless_call_ast(ast = {fn_name, _, args}, state = {:module, _, _, _}) do
+  def construct_headless_call_ast({fn_name, _, args}, state = {:module, _, _, _}) do
     case ElixirAOT.Traverser.traverse_state_list(state, fn_name) do
-      {:ok, traverse_alias, atom} ->
+      {:ok, traverse_alias, _} ->
         "ExRemote_#{Kernel.to_string(traverse_alias)}#{atom_to_raw_string(fn_name)}(#{create_ast(args, state)})"
 
       false ->
@@ -360,12 +372,21 @@ defmodule ElixirAOT.Transformator do
 
   def create_parent_args([], acc, _), do: "(" <> acc <> ")"
 
+
   def create_universal_remote([{:__aliases__, _, module}, target]) do
     create_module(module) <> atom_to_raw_string(target)
   end
 
+  def create_universal_remote(list) when is_list(list) do
+    create_module(list)
+  end
+
   def create_remote([{:__aliases__, _, module}, target]) do
     "ExRemote_" <> create_module(module) <> atom_to_raw_string(target)
+  end
+
+  def create_remote(list) when is_list(list) do
+    create_remote([{:__aliases__, [], Enum.drop(list, -1)}, List.last(list)])
   end
 
   def destruct_alias({:__aliases__, _, module}) do

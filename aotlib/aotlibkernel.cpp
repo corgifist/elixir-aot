@@ -48,3 +48,15 @@ EX_REMOTE_MACRO(Kernel, inspect) {
         }
     }
 }
+
+EX_REMOTE_MACRO(Kernel, in) {
+    ExObject target = LIST_AT(args, 0);
+    ExObject container = LIST_AT(args, 1);
+    if (container.type != EX_LIST_TYPE)
+        ExException_ArgumentError(EX_TUPLE({EX_STRING("Kernel.in/2 is not supported for types: "), target, container}));
+    std::vector<ExObject> rawContainer = AS_LIST(container);
+    for (ExObject object : rawContainer) {
+        if (ExObject_equals(target, object)) return EX_ATOM("true");
+    }
+    return EX_ATOM("false");
+}

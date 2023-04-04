@@ -72,6 +72,10 @@ void ExEnvironment::push() {
     scope.push(new ExBinding());
 }
 
+void ExEnvironment::pushCopy() {
+    scope.push(new ExBinding(*scope.top()));
+}
+
 void ExEnvironment::pop() {
     scope.pop();
 }

@@ -1,4 +1,7 @@
-IO.puts(case 12 do
-    12 -> :raw_twelve
-    x when x == 12 -> :twelve
-end)
+defmodule PrivacyTesting do
+    defp test(x) do
+        IO.puts(x)
+    end
+end
+
+PrivacyTesting.test(12)
