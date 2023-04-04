@@ -14,6 +14,7 @@ defmodule ElixirAOT.Processing do
     create_table(:ex_aot_predefines)
     create_table(:ex_aot_purge_targets)
     create_table(:ex_aot_guards)
+    create_table(:ex_aot_cases)
     add_include("\"aotlib/aotgeneral.h\"")
   end
 

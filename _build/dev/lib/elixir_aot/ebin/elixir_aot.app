@@ -2,7 +2,7 @@
              [{applications,[kernel,stdlib,elixir,logger]},
               {description,"elixir_aot"},
               {modules,['Elixir.ElixirAOT','Elixir.ElixirAOT.CLI',
-                        'Elixir.ElixirAOT.CLI.State',
+                        'Elixir.ElixirAOT.CLI.State','Elixir.ElixirAOT.Cases',
                         'Elixir.ElixirAOT.Compiler','Elixir.ElixirAOT.Guards',
                         'Elixir.ElixirAOT.Modules',
                         'Elixir.ElixirAOT.Processing',

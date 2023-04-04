@@ -56,6 +56,7 @@ defmodule ElixirAOT.Transformator do
         "\n" <>
         "extern ExEnvironment EX_ENVIRONMENT;\n" <>
         ElixirAOT.Processing.get_predefines() <>
+        ElixirAOT.Cases.get_cases() <>
         ElixirAOT.Processing.get_modules() <>
         "\n" <>
         base_code
@@ -65,6 +66,27 @@ defmodule ElixirAOT.Transformator do
   end
 
   def create_ast(ast), do: create_ast(ast, :normal)
+
+  def create_ast({:case, _, [match_value, [do: clauses]]}, state) do
+    case_identifier = "ExCase" <> to_string(Enum.random(0..@clause_identifier_limit))
+    ElixirAOT.Processing.add_predefine("#{case_identifier}(ExObject argument)")
+    ElixirAOT.Processing.create_table(String.to_atom(case_identifier))
+    append_ets_table(:ex_aot_cases, {String.to_atom(case_identifier)})
+    Enum.map(clauses, fn x -> create_ast(x, {:case, case_identifier, state}) end)
+    "#{case_identifier}(#{create_ast(match_value, state)})"
+  end
+
+  def create_ast({:->, _, [[{:when, _, [pattern, guard]}], body]}, {:case, case_identifier, original_state}) do
+    table_atom = String.to_atom(case_identifier)
+    append_ets_table(table_atom, {{table_atom, [:clause, pattern, body, guard]}})
+    ""
+  end
+
+  def create_ast({:->, _, [[pattern], body]}, {:case, case_identifier, original_state}) do
+    table_atom = String.to_atom(case_identifier)
+    append_ets_table(table_atom, {{table_atom, [:clause, pattern, body, true]}})
+    ""
+  end
 
   def create_ast(quote_form = {:quote, _, [[do: body]]}, state) do
     quoted_result = Code.eval_quoted(quote_form, [])
@@ -87,6 +109,7 @@ defmodule ElixirAOT.Transformator do
   end
 
   def create_ast({:defmacro, _, [{_, _, _}, _]}, _) do
+    # useless for aot compilation
     ""
   end
 

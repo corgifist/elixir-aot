@@ -28,7 +28,6 @@ EX_REMOTE_MACRO(Kernel, exit) {
 
 EX_REMOTE_MACRO(Kernel, inspect) {
     ExObject argument = LIST_AT(args, 0);
-    std::cout << TypeToString(argument) << std::endl;
     switch (argument.type) {
         case EX_STRING_TYPE: {
             return EX_STRING("\"" + ExObject_ToString(argument) + "\"");
